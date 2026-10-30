@@ -30,10 +30,7 @@ class MockFriendRepository {
         displayName: 'Diego Soto',
         tennisLevel: 'Intermedio',
       ),
-      const Friend(
-        id: 'u6',
-        displayName: 'Valentina Paz',
-      ),
+      const Friend(id: 'u6', displayName: 'Valentina Paz'),
     ];
   }
 

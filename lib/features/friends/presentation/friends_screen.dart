@@ -109,7 +109,8 @@ class FriendsScreen extends ConsumerWidget {
   }
 
   void _showMockMessage(BuildContext context, String message) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 }
 
@@ -136,9 +137,8 @@ class _RequestTile extends StatelessWidget {
             Expanded(
               child: Text(
                 request.displayName,
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
+                style: Theme.of(context).textTheme.titleSmall
+                    ?.copyWith(fontWeight: FontWeight.w600),
               ),
             ),
             IconButton(
@@ -183,9 +183,7 @@ class _FriendTile extends StatelessWidget {
           ? Icon(Icons.star, color: theme.colorScheme.tertiary)
           : null,
       onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Perfil de ${friend.displayName} (prototipo).'),
-        ),
+        SnackBar(content: Text('Perfil de ${friend.displayName} (prototipo).')),
       ),
     );
   }

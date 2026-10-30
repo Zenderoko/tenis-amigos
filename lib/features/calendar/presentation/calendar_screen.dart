@@ -59,9 +59,8 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
             child: RefreshIndicator(
               onRefresh: () async => ref.invalidate(matchesProvider),
               child: matches.when(
-                loading: () => const LoadingView(
-                  message: 'Cargando el calendario…',
-                ),
+                loading: () =>
+                    const LoadingView(message: 'Cargando el calendario…'),
                 error: (Object error, StackTrace stack) => ListView(
                   children: <Widget>[
                     const SizedBox(height: 80),
@@ -72,12 +71,16 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                   ],
                 ),
                 data: (List<Match> data) {
-                  final List<Match> dayMatches = data
-                      .where((Match m) => _isSameDay(m.startsAt, _selectedDay))
-                      .toList()
-                    ..sort(
-                      (Match a, Match b) => a.startsAt.compareTo(b.startsAt),
-                    );
+                  final List<Match> dayMatches =
+                      data
+                          .where(
+                            (Match m) => _isSameDay(m.startsAt, _selectedDay),
+                          )
+                          .toList()
+                        ..sort(
+                          (Match a, Match b) =>
+                              a.startsAt.compareTo(b.startsAt),
+                        );
 
                   if (dayMatches.isEmpty) {
                     return ListView(
@@ -219,11 +222,10 @@ class _WeekStrip extends StatelessWidget {
                 weekdayLabel: AppDateFormatters.capitalize(
                   weekdayFormat.format(weekStart.add(Duration(days: i))),
                 ).substring(0, 3),
-                isSelected:
-                    _CalendarScreenState._isSameDay(
-                      weekStart.add(Duration(days: i)),
-                      selectedDay,
-                    ),
+                isSelected: _CalendarScreenState._isSameDay(
+                  weekStart.add(Duration(days: i)),
+                  selectedDay,
+                ),
                 isToday: _CalendarScreenState._isSameDay(
                   weekStart.add(Duration(days: i)),
                   today,

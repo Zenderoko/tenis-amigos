@@ -7,7 +7,8 @@ import 'package:flutter/material.dart';
 class PrototypeBanner extends StatelessWidget {
   const PrototypeBanner({
     super.key,
-    this.message = 'Prototipo visual · datos de ejemplo, aún sin conexión al backend',
+    this.message =
+        'Prototipo visual · datos de ejemplo, aún sin conexión al backend',
   });
 
   final String message;

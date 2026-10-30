@@ -57,10 +57,21 @@ presentation  →  data (repositorio)  →  Supabase
   el `id` de Supabase Auth.
 - **Localización**: la app fuerza `es` y usa `flutter_localizations` +
   `initializeDateFormatting('es')`.
+- **Configuración**: `.env` se empaqueta como asset y se lee con
+  `flutter_dotenv`. `AppConfig` expone las claves de Supabase y los client IDs
+  de Google. El archivo está en `.gitignore`.
+- **Autenticación**: las pantallas solo llaman a `AuthController`; este usa
+  `GoogleAuthService` (token nativo), `AuthRepository` (sesión de Supabase) y
+  `ProfileRepository` (perfil). Ninguna pantalla accede a Supabase directamente.
+- **Google OAuth**: Google Sign-In 7.x obtiene un ID token y se canjea con
+  `signInWithIdToken` de Supabase. En Android se usa el Web Client ID como
+  `serverClientId`; el cliente Android se valida por package name + SHA-1.
+- **Sesión**: Supabase restaura la sesión al iniciar. El router decide la
+  pantalla inicial de forma perezosa, después de `Supabase.initialize`.
 
 ## Pendiente (etapas siguientes)
 
-- Esquema PostgreSQL y RLS (Etapa 2).
-- Autenticación real y perfil persistente (Etapa 2).
+- Inicio de sesión con correo y contraseña, y recuperación de contraseña.
+- Edición del perfil desde la app.
 - Partidos, invitaciones y reglas de negocio en backend (Etapas 3-5).
 - Notificaciones push (Etapa 6).

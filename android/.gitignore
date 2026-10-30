@@ -7,8 +7,13 @@ gradle-wrapper.jar
 GeneratedPluginRegistrant.java
 .cxx/
 
-# Remember to never publicly share your keystore.
+# Remember to never publicly share your release keystore.
 # See https://flutter.dev/to/reference-keystore
 key.properties
 **/*.keystore
 **/*.jks
+
+# El keystore de depuración sí se versiona: su SHA-1 está registrado en el
+# cliente Android de Google y es necesario para reproducir el login en otro
+# equipo. No contiene credenciales de producción.
+!app/debug.keystore

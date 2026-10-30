@@ -32,7 +32,8 @@ abstract final class AppDateFormatters {
       DateFormat("MMMM 'de' y", _locale).format(date);
 
   /// "19:30".
-  static String time(DateTime date) => DateFormat('HH:mm', _locale).format(date);
+  static String time(DateTime date) =>
+      DateFormat('HH:mm', _locale).format(date);
 
   /// "19:30 – 21:00" a partir de la hora de inicio y la duración.
   static String timeRange(DateTime start, int durationMinutes) {

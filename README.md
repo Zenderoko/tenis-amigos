@@ -4,12 +4,15 @@ Aplicación móvil (Flutter) para organizar partidos de tenis entre amigos:
 crear partidos, invitar jugadores, responder invitaciones, consultar el
 calendario y reprogramar horarios.
 
-> Estado: **Etapa 1 — Esqueleto de la app**. La interfaz de navegación está
-> lista, pero todavía usa **datos ficticios** (mock). El backend (Supabase) se
-> conecta a partir de la Etapa 2.
+> Estado: **Etapa 2 — Supabase y autenticación (en progreso)**. El registro y
+> el inicio de sesión con Google ya usan Supabase. Las demás pantallas todavía
+> muestran datos ficticios (mock).
 
 ## Estado actual
 
+- Registro e inicio de sesión con Google (Supabase Auth).
+- Perfil real del usuario en `public.profiles` y cierre de sesión.
+- Sesión persistente entre reinicios.
 - Navegación con cuatro secciones: Inicio, Calendario, Amigos y Perfil.
 - Tema visual (identidad tenis) y componentes reutilizables.
 - Estados de carga, vacío y error.
@@ -27,6 +30,15 @@ Verifica el entorno con:
 ```powershell
 flutter doctor
 ```
+
+## Configuración
+
+1. Copia `.env.example` a `.env` y completa Supabase y Google OAuth.
+2. Aplica las migraciones de `supabase/migrations/` en Supabase (SQL Editor).
+3. Añade una cuenta de Google al emulador Android.
+
+Detalle paso a paso en
+[`docs/setup-supabase.md`](docs/setup-supabase.md).
 
 ## Cómo ejecutar
 
@@ -61,18 +73,22 @@ lib/
     scaffold_with_nav_bar.dart  Barra de navegación inferior
     theme/                      Colores y tema visual
   core/
+    config/                     Configuración leída de .env
+    errors/                     Errores controlados
     constants/                  Marca y datos mock
     utils/                      Formato de fechas, avatares
     widgets/                    Componentes reutilizables (estados, tarjetas)
   features/
+    auth/                       Google Sign-In y sesión de Supabase
     home/                       Pantalla de Inicio
     calendar/                   Pantalla de Calendario
     friends/                    Amigos (domain/data/presentation)
     matches/                    Partidos (domain/data/presentation)
-    profile/                    Perfil
+    profile/                    Perfil real del usuario
 ```
 
 ## Documentación
 
 - [`docs/architecture.md`](docs/architecture.md): arquitectura y decisiones.
 - [`docs/development-roadmap.md`](docs/development-roadmap.md): etapas y estado.
+- [`docs/setup-supabase.md`](docs/setup-supabase.md): configuración de Supabase.

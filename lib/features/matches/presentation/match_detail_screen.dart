@@ -69,8 +69,7 @@ class _MatchDetail extends StatelessWidget {
             children: <Widget>[
               for (int i = 0; i < match.participants.length; i++) ...<Widget>[
                 _ParticipantRow(participant: match.participants[i]),
-                if (i < match.participants.length - 1)
-                  const Divider(height: 1),
+                if (i < match.participants.length - 1) const Divider(height: 1),
               ],
             ],
           ),
@@ -132,9 +131,8 @@ class _MatchDetail extends StatelessWidget {
   }
 
   void _mock(BuildContext context, String message) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 }
 
@@ -208,9 +206,7 @@ class _InfoRow extends StatelessWidget {
       children: <Widget>[
         Icon(icon, size: 18, color: theme.colorScheme.onSurfaceVariant),
         const SizedBox(width: 10),
-        Expanded(
-          child: Text(text, style: theme.textTheme.bodyLarge),
-        ),
+        Expanded(child: Text(text, style: theme.textTheme.bodyLarge)),
       ],
     );
   }
@@ -238,11 +234,7 @@ class _ParticipantRow extends StatelessWidget {
           ),
           if (participant.isOrganizer) ...<Widget>[
             const SizedBox(width: 8),
-            Icon(
-              Icons.star,
-              size: 16,
-              color: theme.colorScheme.tertiary,
-            ),
+            Icon(Icons.star, size: 16, color: theme.colorScheme.tertiary),
           ],
         ],
       ),

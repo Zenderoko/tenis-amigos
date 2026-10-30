@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../app/router.dart';
 import '../../../core/constants/app_info.dart';
+import '../../../core/errors/app_failure.dart';
 import '../../../core/utils/date_formatters.dart';
 import '../../../core/widgets/initials_avatar.dart';
-import '../../../core/widgets/prototype_banner.dart';
 import '../../../core/widgets/section_header.dart';
 import '../../../core/widgets/state_views.dart';
-import '../data/mock_profile_repository.dart';
+import '../../auth/presentation/auth_controller.dart';
+import '../data/profile_providers.dart';
 import '../domain/user_profile.dart';
 
 /// Pantalla de Perfil: información personal y configuración básica.
@@ -36,8 +39,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         data: (UserProfile data) => ListView(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
           children: <Widget>[
-            const PrototypeBanner(),
-            const SizedBox(height: 20),
             _ProfileHeader(profile: data),
             const SizedBox(height: 24),
             const SectionHeader(title: 'Preferencias'),
@@ -80,9 +81,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   ListTile(
                     leading: const Icon(Icons.logout),
                     title: const Text('Cerrar sesión'),
-                    onTap: () => _showMessage(
-                      'El cierre de sesión estará disponible en la Etapa 2.',
-                    ),
+                    onTap: _signOut,
                   ),
                   const Divider(height: 1),
                   ListTile(
@@ -109,10 +108,26 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
+  Future<void> _signOut() async {
+    try {
+      await ref.read(authControllerProvider.notifier).signOut();
+      if (mounted) {
+        context.go(AppRoutes.login);
+      }
+    } on AppFailure catch (error) {
+      if (mounted) {
+        _showMessage(error.message);
+      }
+    } catch (_) {
+      if (mounted) {
+        _showMessage('No pudimos cerrar la sesión. Intenta de nuevo.');
+      }
+    }
+  }
+
   void _showMessage(String message) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 
   void _showAbout(BuildContext context) {

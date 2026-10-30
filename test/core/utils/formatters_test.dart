@@ -27,9 +27,7 @@ void main() {
     });
 
     test('fullDate está en español', () {
-      final String formatted = AppDateFormatters.fullDate(
-        DateTime(2026, 5, 5),
-      );
+      final String formatted = AppDateFormatters.fullDate(DateTime(2026, 5, 5));
       expect(formatted.contains('mayo'), isTrue);
       expect(formatted.contains('2026'), isTrue);
     });

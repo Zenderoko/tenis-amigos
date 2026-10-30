@@ -6,7 +6,7 @@ Estado de las etapas del proyecto. **No se avanza de etapa sin aprobación.**
 |-------|-------------|--------|
 | 0 | Preparación y planificación del entorno | ✅ Completada |
 | 1 | Esqueleto de la app (navegación, tema, pantallas) | ✅ Completada |
-| 2 | Supabase y autenticación | ⬜ Pendiente |
+| 2 | Supabase y autenticación | 🟨 En progreso |
 | 3 | Amigos | ⬜ Pendiente |
 | 4 | Partidos | ⬜ Pendiente |
 | 5 | Calendario y reprogramación | ⬜ Pendiente |
@@ -42,11 +42,29 @@ Verificación ejecutada: `flutter analyze` (sin issues), `flutter test`
 Todos los datos mostrados son **ficticios** (marcados con un aviso de
 prototipo en pantalla).
 
-## Etapa 2 — Supabase y autenticación (siguiente)
+## Etapa 2 — Supabase y autenticación (en progreso)
 
-Previsto:
+Hecho:
 
-- Proyecto Supabase y variables de configuración (`.env.example`).
+- Proyecto Supabase y configuración local con `.env` + `flutter_dotenv`.
 - Esquema PostgreSQL versionado con migraciones y RLS.
-- Registro/login con correo y contraseña; Google OAuth.
-- Perfil básico y persistencia de sesión.
+- Registro e inicio de sesión con Google (Google Sign-In + Supabase Auth).
+- Creación automática del perfil en `public.profiles`.
+- Perfil real con nombre y foto de Google; el saludo de Inicio usa el nombre.
+- Persistencia de sesión y cierre de sesión.
+- Manejo de cancelación del flujo de Google y navegación de vuelta.
+- Corrección de la recursión de políticas RLS que impedía leer perfiles.
+
+Pendiente para completar la Etapa 2:
+
+- [ ] Registro con correo y contraseña.
+- [ ] Inicio de sesión con correo y contraseña.
+- [ ] Confirmación de correo (si está activada en Supabase).
+- [ ] Recuperación de contraseña.
+- [ ] Edición del perfil (nombre, foto, nivel y mano dominante).
+- [ ] Pruebas de los flujos de autenticación y del perfil.
+- [ ] Verificación E2E en Android con las migraciones aplicadas.
+
+Criterio de cierre: las vías de acceso con Google y con correo/contraseña
+funcionan, la recuperación de contraseña está disponible, el perfil se puede
+editar y las pruebas de la etapa pasan.

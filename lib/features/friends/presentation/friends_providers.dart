@@ -10,8 +10,8 @@ final Provider<MockFriendRepository> friendRepositoryProvider =
 /// Lista de amigos confirmados (mock).
 final FutureProvider<List<Friend>> friendsProvider =
     FutureProvider<List<Friend>>((Ref ref) async {
-  return ref.watch(friendRepositoryProvider).fetchFriends();
-});
+      return ref.watch(friendRepositoryProvider).fetchFriends();
+    });
 
 /// Solicitudes de amistad pendientes.
 ///
@@ -19,7 +19,7 @@ final FutureProvider<List<Friend>> friendsProvider =
 /// asíncrona, el usuario puede aceptarlas o rechazarlas. Por ahora el cambio
 /// es solo en memoria (prototipo); en la Etapa 3 se persistirá en el backend.
 final AsyncNotifierProvider<FriendRequestsNotifier, List<FriendRequest>>
-    friendRequestsProvider =
+friendRequestsProvider =
     AsyncNotifierProvider<FriendRequestsNotifier, List<FriendRequest>>(
       FriendRequestsNotifier.new,
     );
@@ -35,12 +35,9 @@ class FriendRequestsNotifier extends AsyncNotifier<List<FriendRequest>> {
   void reject(String id) => _remove(id);
 
   void _remove(String id) {
-    final List<FriendRequest> current =
-        state.value ?? const <FriendRequest>[];
+    final List<FriendRequest> current = state.value ?? const <FriendRequest>[];
     state = AsyncData<List<FriendRequest>>(
-      current
-          .where((FriendRequest request) => request.id != id)
-          .toList(),
+      current.where((FriendRequest request) => request.id != id).toList(),
     );
   }
 }

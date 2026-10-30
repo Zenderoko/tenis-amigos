@@ -43,6 +43,10 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+/android/build/
+
+# Configuración local de OAuth (IDs y SHA-1 del entorno)
+google_oauth_config.txt
 
 # Widget Preview related
 .widget_preview/

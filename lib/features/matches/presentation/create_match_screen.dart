@@ -51,8 +51,7 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
           children: <Widget>[
             const PrototypeBanner(
-              message:
-                  'Prototipo visual · el partido no se guarda todavía (Etapa 4)',
+              message: 'Prototipo visual · el partido no se guarda todavía (Etapa 4)',
             ),
             const SizedBox(height: 20),
             const SectionHeader(title: 'Modalidad'),
@@ -137,8 +136,8 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
               ),
               validator: (String? value) =>
                   (value == null || value.trim().isEmpty)
-                      ? 'Indica el lugar del partido'
-                      : null,
+                  ? 'Indica el lugar del partido'
+                  : null,
             ),
             const SizedBox(height: 12),
             TextFormField(
@@ -192,9 +191,8 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
     if (picked != null) {
       setState(() {
         _time = picked;
-        _timeController.text = MaterialLocalizations.of(
-          context,
-        ).formatTimeOfDay(picked, alwaysUse24HourFormat: true);
+        _timeController.text = MaterialLocalizations.of(context)
+            .formatTimeOfDay(picked, alwaysUse24HourFormat: true);
       });
     }
   }

@@ -8,11 +8,15 @@ import '../../../core/utils/date_formatters.dart';
 import '../../../core/widgets/prototype_banner.dart';
 import '../../../core/widgets/section_header.dart';
 import '../../../core/widgets/state_views.dart';
+import '../../auth/domain/auth_user.dart';
+import '../../auth/presentation/auth_controller.dart';
 import '../../matches/domain/match.dart';
 import '../../matches/presentation/matches_providers.dart';
 import '../../matches/presentation/widgets/match_card.dart';
+import '../../profile/data/profile_providers.dart';
+import '../../profile/domain/user_profile.dart';
 
-/// Pantalla de Inicio: próximos partidos e invitaciones pendientes.
+/// Pantalla de Inicio: solo partidos confirmados.
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
@@ -54,35 +58,29 @@ class _HomeContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final List<Match> invitations = matches
-        .where((Match m) => m.hasPendingInvitationFor(kMockCurrentUserId))
-        .toList()
-      ..sort((Match a, Match b) => a.startsAt.compareTo(b.startsAt));
+    final List<Match> confirmedMatches = matches.where((Match m) {
+      if (m.status != MatchStatus.confirmed) {
+        return false;
+      }
+      return m.participants.any(
+        (MatchParticipant p) =>
+            p.id == kMockCurrentUserId &&
+            p.response == ParticipantResponse.accepted,
+      );
+    }).toList()..sort((Match a, Match b) => a.startsAt.compareTo(b.startsAt));
 
-    final List<Match> upcoming = matches
-        .where(
-          (Match m) =>
-              m.isActive && !m.hasPendingInvitationFor(kMockCurrentUserId),
-        )
-        .toList()
-      ..sort((Match a, Match b) => a.startsAt.compareTo(b.startsAt));
-
-    if (invitations.isEmpty && upcoming.isEmpty) {
+    if (confirmedMatches.isEmpty) {
       return ListView(
         padding: const EdgeInsets.all(16),
         children: <Widget>[
           const _Greeting(),
           const SizedBox(height: 24),
           const SizedBox(height: 100),
-          EmptyView(
-            title: 'Aún no tienes partidos',
+          const EmptyView(
+            title: 'No hay partidos confirmados',
             message:
-                'Cuando organices o te inviten a un partido, aparecerá aquí.',
-            action: FilledButton.icon(
-              onPressed: () => context.push('/nuevo-partido'),
-              icon: const Icon(Icons.add),
-              label: const Text('Crear partido'),
-            ),
+                'Solo se mostrarán aquí los partidos que estén confirmados.',
+            icon: Icons.event_available_outlined,
           ),
         ],
       );
@@ -95,40 +93,32 @@ class _HomeContent extends StatelessWidget {
         const SizedBox(height: 12),
         const PrototypeBanner(),
         const SizedBox(height: 20),
-        if (invitations.isNotEmpty) ...<Widget>[
-          SectionHeader(title: 'Invitaciones pendientes (${invitations.length})'),
-          for (final Match match in invitations) ...<Widget>[
-            MatchCard(
-              match: match,
-              onTap: () => context.push('/partido/${match.id}'),
-            ),
-            const SizedBox(height: 12),
-          ],
+        const SectionHeader(title: 'Partidos confirmados'),
+        for (final Match match in confirmedMatches) ...<Widget>[
+          MatchCard(
+            match: match,
+            onTap: () => context.push('/partido/${match.id}'),
+          ),
           const SizedBox(height: 12),
-        ],
-        if (upcoming.isNotEmpty) ...<Widget>[
-          const SectionHeader(title: 'Próximos partidos'),
-          for (final Match match in upcoming) ...<Widget>[
-            MatchCard(
-              match: match,
-              onTap: () => context.push('/partido/${match.id}'),
-            ),
-            const SizedBox(height: 12),
-          ],
         ],
       ],
     );
   }
 }
 
-class _Greeting extends StatelessWidget {
+class _Greeting extends ConsumerWidget {
   const _Greeting();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final ThemeData theme = Theme.of(context);
     final String today = AppDateFormatters.capitalize(
       AppDateFormatters.weekdayDayMonth(DateTime.now()),
+    );
+    final UserProfile? profile = ref.watch(profileProvider).value;
+    final AuthUser? user = ref.watch(authControllerProvider).value;
+    final String name = _firstName(
+      profile?.displayName ?? user?.displayNameOrEmail ?? '',
     );
 
     return Container(
@@ -146,7 +136,7 @@ class _Greeting extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           Text(
-            'Hola, $kMockCurrentUserName',
+            name.isEmpty ? 'Hola' : 'Hola, $name',
             style: theme.textTheme.titleLarge?.copyWith(
               color: Colors.white,
               fontWeight: FontWeight.w800,
@@ -162,5 +152,10 @@ class _Greeting extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  String _firstName(String value) {
+    final List<String> parts = value.trim().split(RegExp(r'\s+'));
+    return parts.isEmpty ? '' : parts.first;
   }
 }

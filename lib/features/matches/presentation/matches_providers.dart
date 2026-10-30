@@ -12,14 +12,16 @@ final Provider<MockMatchRepository> matchRepositoryProvider =
 ///
 /// Es un provider con caché: las pantallas derivan de aquí sin volver a
 /// consultar el repositorio.
-final FutureProvider<List<Match>> matchesProvider =
-    FutureProvider<List<Match>>((Ref ref) async {
-  return ref.watch(matchRepositoryProvider).fetchMatches();
-});
-
-/// Detalle de un partido por identificador.
-final matchByIdProvider = FutureProvider.family<Match?, String>(
-  (Ref ref, String id) async {
-    return ref.watch(matchRepositoryProvider).fetchMatchById(id);
+final FutureProvider<List<Match>> matchesProvider = FutureProvider<List<Match>>(
+  (Ref ref) async {
+    return ref.watch(matchRepositoryProvider).fetchMatches();
   },
 );
+
+/// Detalle de un partido por identificador.
+final matchByIdProvider = FutureProvider.family<Match?, String>((
+  Ref ref,
+  String id,
+) async {
+  return ref.watch(matchRepositoryProvider).fetchMatchById(id);
+});
