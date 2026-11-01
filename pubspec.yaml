@@ -34,6 +34,7 @@ dependencies:
   flutter_localizations:
     sdk: flutter
   google_sign_in: ^7.2.0
+  image_picker: ^1.2.4
   supabase_flutter: ^2.18.3
 
   # The following adds the Cupertino Icons font to your application.
@@ -47,6 +48,7 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  http: ^1.6.0
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is

@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'app/app.dart';
 import 'core/config/app_config.dart';
+import 'features/auth/data/auth_link_events.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -44,6 +45,7 @@ Future<void> _initializeSupabase(AppConfig config) async {
       url: config.supabaseUrl,
       publishableKey: config.key,
     );
+    AuthLinkEvents.start();
   } catch (error) {
     debugPrint('No se pudo inicializar Supabase: $error');
   }

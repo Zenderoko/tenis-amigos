@@ -4,13 +4,19 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../features/auth/data/auth_link_events.dart';
+import '../features/auth/domain/auth_state_change.dart';
+import '../features/auth/presentation/change_password_screen.dart';
+import '../features/auth/presentation/forgot_password_screen.dart';
 import '../features/auth/presentation/login_screen.dart';
 import '../features/auth/presentation/register_screen.dart';
+import '../features/auth/presentation/reset_password_screen.dart';
 import '../features/friends/presentation/friends_screen.dart';
 import '../features/home/presentation/home_screen.dart';
 import '../features/invitations/presentation/invitations_screen.dart';
 import '../features/matches/presentation/create_match_screen.dart';
 import '../features/matches/presentation/match_detail_screen.dart';
+import '../features/profile/presentation/edit_profile_screen.dart';
 import '../features/profile/presentation/profile_screen.dart';
 import 'scaffold_with_nav_bar.dart';
 
@@ -24,6 +30,10 @@ abstract final class AppRoutes {
   static const String createMatch = '/nuevo-partido';
   static const String login = '/login';
   static const String register = '/registro';
+  static const String forgotPassword = '/recuperar-contrasena';
+  static const String resetPassword = '/restablecer-contrasena';
+  static const String editProfile = '/perfil/editar';
+  static const String changePassword = '/perfil/cambiar-contrasena';
 }
 
 /// Router de la aplicación.
@@ -42,7 +52,10 @@ final GoRouter appRouter = createRouter();
 GoRouter createRouter({String? initialLocation}) {
   return GoRouter(
     initialLocation: initialLocation ?? _initialLocation(),
-    refreshListenable: _AuthRefreshNotifier(),
+    refreshListenable: Listenable.merge(<Listenable>[
+      _AuthRefreshNotifier(),
+      AuthLinkEvents.latest,
+    ]),
     redirect: _redirect,
     routes: <RouteBase>[
       GoRoute(
@@ -54,6 +67,16 @@ GoRouter createRouter({String? initialLocation}) {
         path: AppRoutes.register,
         builder: (BuildContext context, GoRouterState state) =>
             const RegisterScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.forgotPassword,
+        builder: (BuildContext context, GoRouterState state) =>
+            const ForgotPasswordScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.resetPassword,
+        builder: (BuildContext context, GoRouterState state) =>
+            const ResetPasswordScreen(),
       ),
       StatefulShellRoute.indexedStack(
         builder: (
@@ -110,11 +133,24 @@ GoRouter createRouter({String? initialLocation}) {
         builder: (BuildContext context, GoRouterState state) =>
             const CreateMatchScreen(),
       ),
+      GoRoute(
+        path: AppRoutes.editProfile,
+        builder: (BuildContext context, GoRouterState state) =>
+            const EditProfileScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.changePassword,
+        builder: (BuildContext context, GoRouterState state) =>
+            const ChangePasswordScreen(),
+      ),
     ],
   );
 }
 
 String _initialLocation() {
+  if (AuthLinkEvents.latest.value == AuthChangeType.passwordRecovery) {
+    return AppRoutes.resetPassword;
+  }
   return _hasSession() ? AppRoutes.home : AppRoutes.login;
 }
 
@@ -122,9 +158,18 @@ String? _redirect(BuildContext context, GoRouterState state) {
   final bool hasSession = _hasSession();
   final bool isAuthRoute =
       state.matchedLocation == AppRoutes.login ||
-      state.matchedLocation == AppRoutes.register;
+      state.matchedLocation == AppRoutes.register ||
+      state.matchedLocation == AppRoutes.forgotPassword;
+  final bool isPasswordReset = state.matchedLocation == AppRoutes.resetPassword;
 
-  if (!hasSession && !isAuthRoute) {
+  // Un enlace de recuperación debe abrir la pantalla de nueva contraseña
+  // incluso si Supabase ya restauró una sesión temporal.
+  if (AuthLinkEvents.latest.value == AuthChangeType.passwordRecovery &&
+      !isPasswordReset) {
+    return AppRoutes.resetPassword;
+  }
+
+  if (!hasSession && !isAuthRoute && !isPasswordReset) {
     return AppRoutes.login;
   }
   if (hasSession && isAuthRoute) {

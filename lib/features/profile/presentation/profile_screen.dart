@@ -73,9 +73,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     leading: const Icon(Icons.edit_outlined),
                     title: const Text('Editar perfil'),
                     trailing: const Icon(Icons.chevron_right),
-                    onTap: () => _showMessage(
-                      'Editar el perfil estará disponible en la Etapa 2.',
-                    ),
+                    onTap: () => context.push(AppRoutes.editProfile),
+                  ),
+                  const Divider(height: 1),
+                  ListTile(
+                    leading: const Icon(Icons.password_outlined),
+                    title: const Text('Cambiar contraseña'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => context.push(AppRoutes.changePassword),
                   ),
                   const Divider(height: 1),
                   ListTile(
@@ -163,7 +168,11 @@ class _ProfileHeader extends StatelessWidget {
         padding: const EdgeInsets.all(18),
         child: Column(
           children: <Widget>[
-            InitialsAvatar(name: profile.displayName, radius: 36),
+            InitialsAvatar(
+              name: profile.displayName,
+              imageUrl: profile.avatarUrl,
+              radius: 36,
+            ),
             const SizedBox(height: 12),
             Text(
               profile.displayName,
@@ -187,12 +196,12 @@ class _ProfileHeader extends StatelessWidget {
                 if (profile.tennisLevel != null)
                   Chip(
                     avatar: const Icon(Icons.speed, size: 16),
-                    label: Text('Nivel: ${profile.tennisLevel}'),
+                    label: Text('Nivel: ${profile.tennisLevel!.label}'),
                   ),
                 if (profile.dominantHand != null)
                   Chip(
                     avatar: const Icon(Icons.back_hand_outlined, size: 16),
-                    label: Text(profile.dominantHand!),
+                    label: Text(profile.dominantHand!.label),
                   ),
                 Chip(
                   avatar: const Icon(Icons.calendar_today_outlined, size: 16),

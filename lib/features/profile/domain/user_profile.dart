@@ -1,3 +1,6 @@
+import 'dominant_hand.dart';
+import 'tennis_level.dart';
+
 /// Modelo del perfil de usuario.
 ///
 /// Se vincula al usuario de Supabase Auth mediante su id ([id]), no mediante
@@ -30,8 +33,8 @@ class UserProfile {
       email: email,
       memberSince: (createdAt ?? DateTime.now()).toLocal(),
       avatarUrl: _optionalString(map['avatar_url']),
-      tennisLevel: _optionalString(map['tennis_level']),
-      dominantHand: _optionalString(map['dominant_hand']),
+      tennisLevel: TennisLevel.fromValue(map['tennis_level'] as String?),
+      dominantHand: DominantHand.fromValue(map['dominant_hand'] as String?),
     );
   }
 
@@ -44,10 +47,10 @@ class UserProfile {
   final String? avatarUrl;
 
   /// Nivel de tenis opcional.
-  final String? tennisLevel;
+  final TennisLevel? tennisLevel;
 
-  /// Mano dominante opcional ("Diestro" / "Zurdo").
-  final String? dominantHand;
+  /// Mano dominante opcional.
+  final DominantHand? dominantHand;
 }
 
 String _nameFromEmail(String email) {

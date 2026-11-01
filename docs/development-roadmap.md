@@ -54,17 +54,32 @@ Hecho:
 - Persistencia de sesión y cierre de sesión.
 - Manejo de cancelación del flujo de Google y navegación de vuelta.
 - Corrección de la recursión de políticas RLS que impedía leer perfiles.
+- Registro e inicio de sesión con correo y contraseña.
+- Detección de correo ya registrado al crear una cuenta.
+- Confirmación de correo con reenvío del enlace desde la app.
+- Recuperación de contraseña mediante enlace profundo
+  (`tenisamigos://auth-callback`).
+- Cambio de contraseña desde Perfil, verificando la contraseña actual.
+- Edición del perfil: nombre, foto, nivel y mano dominante.
+- Foto de perfil en Supabase Storage (bucket `avatars` con RLS por carpeta).
+- Validadores compartidos y pruebas de auth, perfil y navegación.
 
 Pendiente para completar la Etapa 2:
 
-- [ ] Registro con correo y contraseña.
-- [ ] Inicio de sesión con correo y contraseña.
-- [ ] Confirmación de correo (si está activada en Supabase).
-- [ ] Recuperación de contraseña.
-- [ ] Edición del perfil (nombre, foto, nivel y mano dominante).
-- [ ] Pruebas de los flujos de autenticación y del perfil.
+- [x] Registro con correo y contraseña.
+- [x] Inicio de sesión con correo y contraseña.
+- [x] Confirmación de correo (si está activada en Supabase).
+- [x] Recuperación de contraseña.
+- [x] Cambio de contraseña desde el perfil.
+- [x] Edición del perfil (nombre, foto, nivel y mano dominante).
+- [x] Pruebas de los flujos de autenticación y del perfil.
 - [ ] Verificación E2E en Android con las migraciones aplicadas.
 
+Verificación automatizada: `flutter analyze` sin issues, `flutter test` con 37
+pruebas aprobadas, `flutter build apk --debug` y `flutter build web` correctos.
+Falta la prueba manual en un dispositivo/emulador con el proyecto Supabase
+configurado (correos reales, redirect URL y Storage).
+
 Criterio de cierre: las vías de acceso con Google y con correo/contraseña
-funcionan, la recuperación de contraseña está disponible, el perfil se puede
-editar y las pruebas de la etapa pasan.
+funcionan, la recuperación y el cambio de contraseña están disponibles, el
+perfil se puede editar y las pruebas de la etapa pasan.

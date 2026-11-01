@@ -5,13 +5,20 @@ crear partidos, invitar jugadores, responder invitaciones, consultar el
 calendario y reprogramar horarios.
 
 > Estado: **Etapa 2 — Supabase y autenticación (en progreso)**. El registro y
-> el inicio de sesión con Google ya usan Supabase. Las demás pantallas todavía
-> muestran datos ficticios (mock).
+> el inicio de sesión con Google o correo/contraseña ya usan Supabase. Las demás
+> pantallas todavía muestran datos ficticios (mock).
 
 ## Estado actual
 
 - Registro e inicio de sesión con Google (Supabase Auth).
+- Registro e inicio de sesión con correo y contraseña.
+- Detección de correo ya registrado al crear una cuenta.
+- Confirmación de correo y reenvío del enlace desde la app.
+- Recuperación de contraseña mediante enlace profundo.
+- Cambio de contraseña desde el perfil, verificando la contraseña actual.
 - Perfil real del usuario en `public.profiles` y cierre de sesión.
+- Edición del perfil: nombre, foto, nivel y mano dominante.
+- Foto de perfil en el bucket público `avatars` de Supabase Storage.
 - Sesión persistente entre reinicios.
 - Navegación con cuatro secciones: Inicio, Calendario, Amigos y Perfil.
 - Tema visual (identidad tenis) y componentes reutilizables.
@@ -35,7 +42,9 @@ flutter doctor
 
 1. Copia `.env.example` a `.env` y completa Supabase y Google OAuth.
 2. Aplica las migraciones de `supabase/migrations/` en Supabase (SQL Editor).
-3. Añade una cuenta de Google al emulador Android.
+3. En Supabase, añade `tenisamigos://auth-callback` a las Redirect URLs y
+   revisa la configuración de correo (confirmación y recuperación).
+4. Añade una cuenta de Google al emulador Android.
 
 Detalle paso a paso en
 [`docs/setup-supabase.md`](docs/setup-supabase.md).
@@ -79,12 +88,12 @@ lib/
     utils/                      Formato de fechas, avatares
     widgets/                    Componentes reutilizables (estados, tarjetas)
   features/
-    auth/                       Google Sign-In y sesión de Supabase
+    auth/                       Google, correo/contraseña y sesión de Supabase
     home/                       Pantalla de Inicio
     calendar/                   Pantalla de Calendario
     friends/                    Amigos (domain/data/presentation)
     matches/                    Partidos (domain/data/presentation)
-    profile/                    Perfil real del usuario
+    profile/                    Perfil real del usuario y edición
 ```
 
 ## Documentación
