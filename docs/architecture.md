@@ -41,7 +41,7 @@ presentation  →  data (repositorio)  →  Supabase
 
 `lib/app/router.dart` define:
 
-- `StatefulShellRoute.indexedStack` con cuatro ramas (Inicio, Calendario,
+- `StatefulShellRoute.indexedStack` con cuatro ramas (Inicio, Invitaciones,
   Amigos, Perfil) para conservar el estado de cada pestaña.
 - Rutas de detalle y creación (`/partido/:id`, `/nuevo-partido`) fuera del
   shell, para que se abran por encima sin barra inferior.
@@ -90,7 +90,9 @@ presentation  →  data (repositorio)  →  Supabase
 - **Foto de perfil**: se sube al bucket público `avatars` en
   `<user-id>/avatar-<timestamp>.<ext>` y se guarda la URL pública en
   `profiles.avatar_url`. Las políticas RLS limitan la escritura a la carpeta del
-  usuario.
+  usuario. Se usa `upsert: false` porque el bucket no tiene política SELECT: la
+  sobrescritura, el listado y el borrado desde el cliente requieren ese permiso.
+  Los nombres únicos evitan colisiones sin necesidad de sobrescribir.
 - **Sesión**: Supabase restaura la sesión al iniciar. El router decide la
   pantalla inicial de forma perezosa, después de `Supabase.initialize`.
 - **Validadores y pruebas**: `AuthValidators` centraliza las reglas de los
@@ -99,6 +101,7 @@ presentation  →  data (repositorio)  →  Supabase
 
 ## Pendiente (etapas siguientes)
 
-- Verificación E2E en Android con correos reales y el dashboard configurado.
-- Partidos, invitaciones y reglas de negocio en backend (Etapas 3-5).
+- Amigos, partidos, invitaciones y reglas de negocio en backend (Etapas 3-5).
 - Notificaciones push (Etapa 6).
+- Opcional: política SELECT para que el dueño pueda listar, borrar o
+  sobrescribir sus fotos desde el cliente.

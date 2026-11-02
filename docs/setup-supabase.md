@@ -129,6 +129,11 @@ pública se hace por URL.
 Si el bucket ya existe, la migración actualiza su configuración y las políticas
 sin borrar los archivos.
 
+La app sube cada foto con un nombre único (`avatar-<timestamp>`) y sin
+sobrescribir. Las políticas actuales no incluyen SELECT para el dueño, así que
+listar, borrar o reemplazar archivos desde el cliente requiere añadir esa
+política en el dashboard.
+
 ## 9) Ejecutar
 
 ```powershell
@@ -154,4 +159,5 @@ de entrar. La recuperación de contraseña abre la app mediante
 | No aparece ninguna cuenta | El emulador no tiene una cuenta de Google añadida. |
 | El enlace de correo no vuelve a la app | Falta `tenisamigos://auth-callback` en Redirect URLs. |
 | `No encontramos el bucket avatars` | Falta aplicar la quinta migración. |
+| `new row violates row-level security policy` al subir la foto | El cliente intenta sobrescribir (`upsert`) o listar/borrar sin política SELECT; la app actual sube con `upsert: false`. |
 | El correo de confirmación no llega | Revisa el proveedor Email y la bandeja de spam. |

@@ -6,7 +6,7 @@ Estado de las etapas del proyecto. **No se avanza de etapa sin aprobación.**
 |-------|-------------|--------|
 | 0 | Preparación y planificación del entorno | ✅ Completada |
 | 1 | Esqueleto de la app (navegación, tema, pantallas) | ✅ Completada |
-| 2 | Supabase y autenticación | 🟨 En progreso |
+| 2 | Supabase y autenticación | ✅ Completada |
 | 3 | Amigos | ⬜ Pendiente |
 | 4 | Partidos | ⬜ Pendiente |
 | 5 | Calendario y reprogramación | ⬜ Pendiente |
@@ -42,7 +42,7 @@ Verificación ejecutada: `flutter analyze` (sin issues), `flutter test`
 Todos los datos mostrados son **ficticios** (marcados con un aviso de
 prototipo en pantalla).
 
-## Etapa 2 — Supabase y autenticación (en progreso)
+## Etapa 2 — Supabase y autenticación (completada)
 
 Hecho:
 
@@ -62,24 +62,32 @@ Hecho:
 - Cambio de contraseña desde Perfil, verificando la contraseña actual.
 - Edición del perfil: nombre, foto, nivel y mano dominante.
 - Foto de perfil en Supabase Storage (bucket `avatars` con RLS por carpeta).
+- Subida con nombres únicos y sin `upsert`, porque el bucket no tiene política
+  SELECT y el modo sobrescritura era rechazado por RLS.
 - Validadores compartidos y pruebas de auth, perfil y navegación.
 
-Pendiente para completar la Etapa 2:
+Verificación E2E en Android (completada):
 
-- [x] Registro con correo y contraseña.
-- [x] Inicio de sesión con correo y contraseña.
-- [x] Confirmación de correo (si está activada en Supabase).
-- [x] Recuperación de contraseña.
-- [x] Cambio de contraseña desde el perfil.
-- [x] Edición del perfil (nombre, foto, nivel y mano dominante).
-- [x] Pruebas de los flujos de autenticación y del perfil.
-- [ ] Verificación E2E en Android con las migraciones aplicadas.
+- [x] Inicio de sesión con Google y creación del perfil real.
+- [x] Persistencia de la sesión tras reiniciar la app y cierre de sesión.
+- [x] Login inválido con mensaje "Correo o contraseña incorrectos.".
+- [x] Registro con confirmación de correo activa y pantalla "Revisa tu correo".
+- [x] Reenvío del enlace con manejo del límite de intentos.
+- [x] Solicitud del enlace de recuperación de contraseña.
+- [x] Edición del perfil (nivel y mano dominante) persistida en Supabase.
+- [x] Subida de la foto de perfil al bucket `avatars` y guardado de la URL.
+
+Notas de la verificación:
+
+- El clic final de los enlaces de confirmación y recuperación requiere abrir el
+  buzón real del usuario; la app mostró correctamente las pantallas previas.
+- El cambio de contraseña está cubierto por pruebas automatizadas. No se ejecutó
+  en Android con la cuenta de Google porque esa cuenta no tiene contraseña, y el
+  correo de prueba quedó sin confirmar por el límite de reenvíos.
 
 Verificación automatizada: `flutter analyze` sin issues, `flutter test` con 37
 pruebas aprobadas, `flutter build apk --debug` y `flutter build web` correctos.
-Falta la prueba manual en un dispositivo/emulador con el proyecto Supabase
-configurado (correos reales, redirect URL y Storage).
 
-Criterio de cierre: las vías de acceso con Google y con correo/contraseña
-funcionan, la recuperación y el cambio de contraseña están disponibles, el
-perfil se puede editar y las pruebas de la etapa pasan.
+Criterio de cierre: cumplido. Las vías de acceso con Google y con
+correo/contraseña funcionan, la recuperación y el cambio de contraseña están
+disponibles, el perfil se puede editar y las pruebas de la etapa pasan.

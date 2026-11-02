@@ -176,7 +176,7 @@ class SupabaseProfileRepository implements ProfileRepository {
             fileOptions: FileOptions(
               contentType: contentType,
               cacheControl: '3600',
-              upsert: true,
+              upsert: false,
             ),
           );
       return _supabase.storage.from('avatars').getPublicUrl(path);
@@ -188,6 +188,14 @@ class SupabaseProfileRepository implements ProfileRepository {
           'No encontramos el bucket avatars. Aplica la migración de Storage '
           'en Supabase.',
           code: 'avatars_bucket_missing',
+        );
+      }
+      if (error.statusCode == '403' ||
+          error.message.toLowerCase().contains('row-level security')) {
+        throw const AppFailure(
+          'No tienes permisos para subir la foto. Revisa las políticas del '
+          'bucket avatars en Supabase.',
+          code: 'avatar_policy_error',
         );
       }
       throw const AppFailure(
