@@ -7,7 +7,7 @@ Estado de las etapas del proyecto. **No se avanza de etapa sin aprobación.**
 | 0 | Preparación y planificación del entorno | ✅ Completada |
 | 1 | Esqueleto de la app (navegación, tema, pantallas) | ✅ Completada |
 | 2 | Supabase y autenticación | ✅ Completada |
-| 3 | Amigos | ⬜ Pendiente |
+| 3 | Amigos | ✅ Completada |
 | 4 | Partidos | ⬜ Pendiente |
 | 5 | Calendario y reprogramación | ⬜ Pendiente |
 | 6 | Notificaciones | ⬜ Pendiente |
@@ -91,3 +91,48 @@ pruebas aprobadas, `flutter build apk --debug` y `flutter build web` correctos.
 Criterio de cierre: cumplido. Las vías de acceso con Google y con
 correo/contraseña funcionan, la recuperación y el cambio de contraseña están
 disponibles, el perfil se puede editar y las pruebas de la etapa pasan.
+
+## Etapa 3 — Amigos (completada)
+
+Hecho:
+
+- Migración `20261103000000_friendships.sql` aplicada: una fila por pareja con
+  índice único normalizado, sin autosolicitudes y con `responded_at`.
+- RLS: el cliente solo lee sus relaciones; las mutaciones se hacen con RPC
+  `SECURITY DEFINER` (`send_friend_request_by_email`,
+  `respond_friend_request`, `cancel_friend_request`).
+- Los perfiles de solicitudes pendientes son visibles para poder aceptarlas o
+  rechazarlas, conservando la visibilidad de amigos aceptados y partidos.
+- Búsqueda de personas por correo exacto, sin directorio público.
+- Pantalla de Amigos real: solicitudes recibidas, solicitudes enviadas,
+  aceptar, rechazar, cancelar y listado de amigos con foto y nivel.
+- Estado vacío con acción para agregar al primer amigo y refresco manual.
+- Pruebas de mapeo de amistades y de la pantalla (11 nuevas; 48 en total).
+- Documentación actualizada.
+
+Verificación E2E en Android (completada):
+
+- [x] Estado vacío real y carga desde Supabase.
+- [x] Error claro al buscar un correo sin cuenta.
+- [x] Bloqueo de autosolicitud.
+- [x] Envío, detección de solicitud duplicada y cancelación.
+- [x] Rechazo de una solicitud recibida: desaparece de la lista.
+- [x] Aceptación: la persona pasa a "Mis amigos" con su perfil.
+- [x] Limpieza de los datos de prueba y vuelta al estado vacío.
+
+La cuenta secundaria `amonsalveru+e2e@gmail.com` sigue sin confirmar, así que
+para aceptar/rechazar se insertó una solicitud pendiente real desde el SQL
+Editor. El envío, duplicado y cancelación se probaron desde la app con la cuenta
+principal. Las RPC y las políticas RLS se ejercitaron en ambos sentidos.
+
+Pendiente fuera del criterio de cierre:
+
+- Invitación mediante enlace: diferida porque la app aún no tiene una URL
+  pública de descarga ni un enlace de invitación propio.
+
+Verificación automatizada: `flutter analyze` sin issues, `flutter test` con 48
+pruebas aprobadas, `flutter build apk --debug` y `flutter build web` correctos.
+
+Criterio de cierre: cumplido. Las solicitudes se envían, se aceptan o rechazan,
+la lista de amigos se actualiza y las políticas impiden agregar amistades sin
+consentimiento.

@@ -23,7 +23,7 @@ Cada funcionalidad agrupa lo que necesita; **no se crean carpetas vacías**:
 
 - **presentation**: pantallas, widgets y providers de estado de interfaz.
 - **domain**: modelos y reglas de negocio (por ejemplo, reglas de un partido).
-- **data**: repositorios y acceso a datos (mock ahora, Supabase después).
+- **data**: repositorios y acceso a datos (mock o Supabase según la etapa).
 
 La interfaz **no** ejecuta consultas directas a la base de datos: siempre pasa
 por un repositorio. Esto permite cambiar el mock por Supabase sin tocar las
@@ -56,12 +56,11 @@ presentation  →  data (repositorio)  →  Supabase
 
 - **Riverpod 3.4.3**: los providers son *autoDispose = false* por defecto; el
   estado se cachea. `AsyncValue.value` es la forma de leer el valor actual.
-- **Datos mock aislados**: viven en `data/mock_*_repository.dart` y en
-  `core/constants/mock_data.dart`, claramente marcados. Se eliminarán al
-  conectar Supabase.
-- **Identidad de usuario**: el usuario actual se referencia por `id`
-  (`kMockCurrentUserId = 'me'`), nunca por correo o nombre. En la Etapa 2 será
-  el `id` de Supabase Auth.
+- **Datos mock aislados**: los que quedan (partidos, invitaciones y calendario)
+  viven en `data/mock_*_repository.dart` y en `core/constants/mock_data.dart`,
+  claramente marcados. Se eliminarán al conectar esas etapas a Supabase.
+- **Identidad de usuario**: el usuario actual se referencia por `id`, nunca por
+  correo o nombre. Desde la Etapa 2 es el `id` de Supabase Auth.
 - **Localización**: la app fuerza `es` y usa `flutter_localizations` +
   `initializeDateFormatting('es')`.
 - **Configuración**: `.env` se empaqueta como asset y se lee con
@@ -93,6 +92,17 @@ presentation  →  data (repositorio)  →  Supabase
   usuario. Se usa `upsert: false` porque el bucket no tiene política SELECT: la
   sobrescritura, el listado y el borrado desde el cliente requieren ese permiso.
   Los nombres únicos evitan colisiones sin necesidad de sobrescribir.
+- **Amistades**: una fila por pareja con índice único sobre
+  `(least(user_id, friend_id), greatest(user_id, friend_id))` y estados
+  `pending`, `accepted` y `rejected`. El cliente solo lee sus filas; enviar,
+  responder y cancelar pasa por RPC `SECURITY DEFINER`, y se revocan los permisos
+  de escritura directa. Para agregar se busca por correo exacto, sin directorio
+  público. La invitación por enlace queda pendiente de una URL pública de la app.
+  El provider de amigos depende de `authControllerProvider` para no reutilizar
+  los datos de otra cuenta tras cerrar e iniciar sesión.
+- **RLS de perfiles**: además del perfil propio, amigos aceptados y personas con
+  partidos en común, se permite ver el perfil de quien tiene una solicitud
+  pendiente con el usuario. Así el receptor puede aceptar o rechazar.
 - **Sesión**: Supabase restaura la sesión al iniciar. El router decide la
   pantalla inicial de forma perezosa, después de `Supabase.initialize`.
 - **Validadores y pruebas**: `AuthValidators` centraliza las reglas de los
@@ -101,7 +111,8 @@ presentation  →  data (repositorio)  →  Supabase
 
 ## Pendiente (etapas siguientes)
 
-- Amigos, partidos, invitaciones y reglas de negocio en backend (Etapas 3-5).
+- Partidos, invitaciones y reglas de negocio en backend (Etapas 4-5).
+- Invitación de amistades por enlace, cuando exista una URL pública de la app.
 - Notificaciones push (Etapa 6).
 - Opcional: política SELECT para que el dueño pueda listar, borrar o
   sobrescribir sus fotos desde el cliente.

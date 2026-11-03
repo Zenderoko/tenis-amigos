@@ -4,10 +4,10 @@ Aplicación móvil (Flutter) para organizar partidos de tenis entre amigos:
 crear partidos, invitar jugadores, responder invitaciones, consultar el
 calendario y reprogramar horarios.
 
-> Estado: **Etapa 2 — Supabase y autenticación (completada)**. El registro y el
-> inicio de sesión con Google o correo/contraseña usan Supabase, y el perfil se
-> guarda en el backend. Las demás pantallas todavía muestran datos ficticios
-> (mock).
+> Estado: **Etapa 3 — Amigos (completada)**. La autenticación, el perfil y las
+> amistades usan Supabase. Inicio, Invitaciones, Calendario y partidos siguen con
+> datos ficticios (mock). La invitación por enlace queda pendiente de una URL
+> pública de la app.
 
 ## Estado actual
 
@@ -20,6 +20,8 @@ calendario y reprogramar horarios.
 - Perfil real del usuario en `public.profiles` y cierre de sesión.
 - Edición del perfil: nombre, foto, nivel y mano dominante.
 - Foto de perfil en el bucket público `avatars` de Supabase Storage.
+- Amistades reales: solicitudes por correo exacto, aceptar, rechazar, cancelar y
+  lista de amigos con su foto y nivel.
 - Sesión persistente entre reinicios.
 - Navegación con cuatro secciones: Inicio, Invitaciones, Amigos y Perfil.
 - Tema visual (identidad tenis) y componentes reutilizables.
@@ -92,7 +94,7 @@ lib/
     auth/                       Google, correo/contraseña y sesión de Supabase
     home/                       Pantalla de Inicio
     calendar/                   Pantalla de Calendario
-    friends/                    Amigos (domain/data/presentation)
+    friends/                    Amistades reales (solicitudes y lista)
     invitations/                Invitaciones (domain/data/presentation)
     matches/                    Partidos (domain/data/presentation)
     profile/                    Perfil real del usuario y edición

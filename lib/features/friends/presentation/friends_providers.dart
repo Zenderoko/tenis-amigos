@@ -1,43 +1,58 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../data/mock_friend_repository.dart';
+import '../../../core/errors/app_failure.dart';
+import '../../auth/domain/auth_user.dart';
+import '../../auth/presentation/auth_controller.dart';
+import '../data/friend_repository.dart';
+import '../data/supabase_friend_repository.dart';
 import '../domain/friend.dart';
 
-/// Repositorio de amigos (mock). En la Etapa 3 se reemplazará por Supabase.
-final Provider<MockFriendRepository> friendRepositoryProvider =
-    Provider<MockFriendRepository>((Ref ref) => const MockFriendRepository());
+/// Repositorio de amigos respaldado por Supabase.
+final Provider<FriendRepository> friendRepositoryProvider =
+    Provider<FriendRepository>((Ref ref) => const SupabaseFriendRepository());
 
-/// Lista de amigos confirmados (mock).
-final FutureProvider<List<Friend>> friendsProvider =
-    FutureProvider<List<Friend>>((Ref ref) async {
-      return ref.watch(friendRepositoryProvider).fetchFriends();
-    });
-
-/// Solicitudes de amistad pendientes.
-///
-/// Se modela con un [AsyncNotifier] porque, además de cargarse de forma
-/// asíncrona, el usuario puede aceptarlas o rechazarlas. Por ahora el cambio
-/// es solo en memoria (prototipo); en la Etapa 3 se persistirá en el backend.
-final AsyncNotifierProvider<FriendRequestsNotifier, List<FriendRequest>>
-friendRequestsProvider =
-    AsyncNotifierProvider<FriendRequestsNotifier, List<FriendRequest>>(
-      FriendRequestsNotifier.new,
+/// Amigos y solicitudes del usuario actual.
+final AsyncNotifierProvider<FriendsNotifier, FriendsOverview> friendsProvider =
+    AsyncNotifierProvider<FriendsNotifier, FriendsOverview>(
+      FriendsNotifier.new,
     );
 
-class FriendRequestsNotifier extends AsyncNotifier<List<FriendRequest>> {
+class FriendsNotifier extends AsyncNotifier<FriendsOverview> {
+  FriendRepository get _repository => ref.read(friendRepositoryProvider);
+
   @override
-  Future<List<FriendRequest>> build() {
-    return ref.read(friendRepositoryProvider).fetchRequests();
+  Future<FriendsOverview> build() async {
+    // Depende de la sesión para no reutilizar los amigos de otra cuenta
+    // cuando el provider sigue vivo entre inicios y cierres de sesión.
+    final AuthUser? user = await ref.watch(authControllerProvider.future);
+    if (user == null) {
+      throw const AppFailure(
+        'No hay una sesión activa. Inicia sesión para ver tus amigos.',
+        code: 'no_active_session',
+      );
+    }
+    return _repository.fetchOverview();
   }
 
-  void accept(String id) => _remove(id);
-
-  void reject(String id) => _remove(id);
-
-  void _remove(String id) {
-    final List<FriendRequest> current = state.value ?? const <FriendRequest>[];
-    state = AsyncData<List<FriendRequest>>(
-      current.where((FriendRequest request) => request.id != id).toList(),
+  Future<FriendRequestResult> sendRequest(String email) async {
+    final FriendRequestResult result = await _repository.sendRequestByEmail(
+      email: email,
     );
+    await _reload();
+    return result;
+  }
+
+  Future<void> respond(String requestId, {required bool accept}) async {
+    await _repository.respondToRequest(requestId: requestId, accept: accept);
+    await _reload();
+  }
+
+  Future<void> cancel(String requestId) async {
+    await _repository.cancelRequest(requestId: requestId);
+    await _reload();
+  }
+
+  Future<void> _reload() async {
+    state = await AsyncValue.guard(_repository.fetchOverview);
   }
 }
