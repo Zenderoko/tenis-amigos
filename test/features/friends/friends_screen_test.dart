@@ -1,28 +1,41 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
+import 'package:tenis_amigos/app/router.dart';
 import 'package:tenis_amigos/core/errors/app_failure.dart';
 import 'package:tenis_amigos/features/auth/domain/auth_user.dart';
 import 'package:tenis_amigos/features/auth/presentation/auth_controller.dart';
 import 'package:tenis_amigos/features/friends/data/friend_repository.dart';
+import 'package:tenis_amigos/features/friends/data/friends_realtime.dart';
 import 'package:tenis_amigos/features/friends/domain/friend.dart';
+import 'package:tenis_amigos/features/friends/presentation/friend_profile_screen.dart';
 import 'package:tenis_amigos/features/friends/presentation/friends_providers.dart';
 import 'package:tenis_amigos/features/friends/presentation/friends_screen.dart';
+import 'package:tenis_amigos/features/profile/domain/dominant_hand.dart';
+import 'package:tenis_amigos/features/profile/domain/tennis_level.dart';
 
 void main() {
   final DateTime now = DateTime(2026, 11, 2, 12);
 
   Future<void> pumpFriends(
     WidgetTester tester,
-    _FakeFriendRepository repository,
-  ) async {
+    _FakeFriendRepository repository, {
+    GoRouter? router,
+    _FakeFriendsRealtime? realtime,
+  }) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
           authControllerProvider.overrideWith(_FakeAuthController.new),
           friendRepositoryProvider.overrideWithValue(repository),
+          friendsRealtimeProvider.overrideWithValue(
+            realtime ?? _FakeFriendsRealtime(),
+          ),
         ],
-        child: const MaterialApp(home: FriendsScreen()),
+        child: router == null
+            ? const MaterialApp(home: FriendsScreen())
+            : MaterialApp.router(routerConfig: router),
       ),
     );
     await tester.pumpAndSettle();
@@ -39,6 +52,28 @@ void main() {
 
     expect(find.text('Agrega a tu primer amigo'), findsOneWidget);
     expect(find.text('Agregar amigo'), findsOneWidget);
+  });
+
+  testWidgets('Realtime refresca la lista cuando cambia una amistad', (
+    WidgetTester tester,
+  ) async {
+    final _FakeFriendRepository repository = _FakeFriendRepository(
+      const FriendsOverview(),
+    );
+    final _FakeFriendsRealtime realtime = _FakeFriendsRealtime();
+
+    await pumpFriends(tester, repository, realtime: realtime);
+    expect(find.text('Agrega a tu primer amigo'), findsOneWidget);
+
+    repository.overview = const FriendsOverview(
+      friends: <Friend>[Friend(id: 'u2', displayName: 'Camila Rojas')],
+    );
+    realtime.emit();
+    await tester.pumpAndSettle();
+
+    expect(find.text('Camila Rojas'), findsOneWidget);
+    expect(find.text('Mis amigos (1)'), findsOneWidget);
+    expect(find.text('Agrega a tu primer amigo'), findsNothing);
   });
 
   testWidgets('acepta una solicitud y mueve a la persona a amigos', (
@@ -159,6 +194,92 @@ void main() {
     expect(find.text('Agrega a tu primer amigo'), findsOneWidget);
   });
 
+  testWidgets('abre el perfil y elimina la amistad', (
+    WidgetTester tester,
+  ) async {
+    const Friend camila = Friend(
+      id: 'u2',
+      displayName: 'Camila Rojas',
+      tennisLevel: TennisLevel.intermediate,
+      dominantHand: DominantHand.right,
+    );
+    final _FakeFriendRepository repository = _FakeFriendRepository(
+      const FriendsOverview(friends: <Friend>[camila]),
+    );
+    final GoRouter router = GoRouter(
+      initialLocation: AppRoutes.friends,
+      routes: <RouteBase>[
+        GoRoute(
+          path: AppRoutes.friends,
+          builder: (BuildContext context, GoRouterState state) =>
+              const FriendsScreen(),
+        ),
+        GoRoute(
+          path: '${AppRoutes.friendProfile}/:id',
+          builder: (BuildContext context, GoRouterState state) =>
+              FriendProfileScreen(friend: state.extra! as Friend),
+        ),
+      ],
+    );
+
+    await pumpFriends(tester, repository, router: router);
+    await tester.tap(find.text('Camila Rojas'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Perfil de amigo'), findsOneWidget);
+    expect(find.text('Nivel: Intermedio'), findsOneWidget);
+    expect(find.text('Diestro'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('remove-friend-button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('confirm-remove-friend')));
+    await tester.pumpAndSettle();
+
+    expect(repository.removedFriendId, 'u2');
+    expect(find.text('Camila Rojas ya no está en tus amigos.'), findsOneWidget);
+    expect(find.text('Agrega a tu primer amigo'), findsOneWidget);
+  });
+
+  testWidgets('si falla la eliminación permanece en el perfil', (
+    WidgetTester tester,
+  ) async {
+    const Friend camila = Friend(id: 'u2', displayName: 'Camila Rojas');
+    final _FakeFriendRepository repository = _FakeFriendRepository(
+      const FriendsOverview(friends: <Friend>[camila]),
+    );
+    repository.removeFailure = const AppFailure(
+      'No pudimos eliminar la amistad.',
+      code: 'remove_failed',
+    );
+    final GoRouter router = GoRouter(
+      initialLocation: AppRoutes.friends,
+      routes: <RouteBase>[
+        GoRoute(
+          path: AppRoutes.friends,
+          builder: (BuildContext context, GoRouterState state) =>
+              const FriendsScreen(),
+        ),
+        GoRoute(
+          path: '${AppRoutes.friendProfile}/:id',
+          builder: (BuildContext context, GoRouterState state) =>
+              FriendProfileScreen(friend: state.extra! as Friend),
+        ),
+      ],
+    );
+
+    await pumpFriends(tester, repository, router: router);
+    await tester.tap(find.text('Camila Rojas'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('remove-friend-button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('confirm-remove-friend')));
+    await tester.pumpAndSettle();
+
+    expect(repository.removedFriendId, 'u2');
+    expect(find.text('No pudimos eliminar la amistad.'), findsOneWidget);
+    expect(find.text('Perfil de amigo'), findsOneWidget);
+  });
+
   testWidgets('muestra el error y permite reintentar', (
     WidgetTester tester,
   ) async {
@@ -198,10 +319,12 @@ class _FakeFriendRepository implements FriendRepository {
   );
   AppFailure? fetchFailure;
   AppFailure? sendFailure;
+  AppFailure? removeFailure;
   String? lastEmail;
   String? respondedId;
   bool? lastAccept;
   String? cancelledId;
+  String? removedFriendId;
 
   @override
   Future<FriendsOverview> fetchOverview() async {
@@ -259,4 +382,36 @@ class _FakeFriendRepository implements FriendRepository {
           .toList(),
     );
   }
+
+  @override
+  Future<void> removeFriend({required String friendId}) async {
+    removedFriendId = friendId;
+    final AppFailure? failure = removeFailure;
+    if (failure != null) {
+      throw failure;
+    }
+    overview = FriendsOverview(
+      friends: overview.friends
+          .where((Friend friend) => friend.id != friendId)
+          .toList(),
+      incomingRequests: overview.incomingRequests,
+      outgoingRequests: overview.outgoingRequests,
+    );
+  }
+}
+
+class _FakeFriendsRealtime implements FriendsRealtime {
+  void Function()? _onChanged;
+
+  @override
+  void start(void Function() onChanged) {
+    _onChanged = onChanged;
+  }
+
+  @override
+  void stop() {
+    _onChanged = null;
+  }
+
+  void emit() => _onChanged?.call();
 }

@@ -95,19 +95,23 @@ presentation  →  data (repositorio)  →  Supabase
 - **Amistades**: una fila por pareja con índice único sobre
   `(least(user_id, friend_id), greatest(user_id, friend_id))` y estados
   `pending`, `accepted` y `rejected`. El cliente solo lee sus filas; enviar,
-  responder y cancelar pasa por RPC `SECURITY DEFINER`, y se revocan los permisos
-  de escritura directa. Para agregar se busca por correo exacto, sin directorio
-  público. La invitación por enlace queda pendiente de una URL pública de la app.
-  El provider de amigos depende de `authControllerProvider` para no reutilizar
-  los datos de otra cuenta tras cerrar e iniciar sesión.
+  responder, cancelar y eliminar pasa por RPC `SECURITY DEFINER`, y se revocan
+  los permisos de escritura directa. Para agregar se busca por correo exacto, sin
+  directorio público. Al tocar un amigo se abre su perfil y se puede eliminar la
+  relación, lo que borra la fila para ambos. `friendships` se publica en
+  `supabase_realtime` con `replica identity full` para refrescar la lista de las
+  dos personas sin intervención manual. La invitación por enlace queda pendiente
+  de una URL pública de la app. El provider de amigos depende de
+  `authControllerProvider` para no reutilizar los datos de otra cuenta tras
+  cerrar e iniciar sesión.
 - **RLS de perfiles**: además del perfil propio, amigos aceptados y personas con
   partidos en común, se permite ver el perfil de quien tiene una solicitud
   pendiente con el usuario. Así el receptor puede aceptar o rechazar.
 - **Sesión**: Supabase restaura la sesión al iniciar. El router decide la
   pantalla inicial de forma perezosa, después de `Supabase.initialize`.
 - **Validadores y pruebas**: `AuthValidators` centraliza las reglas de los
-  formularios. Las pruebas cubren validadores, enums, navegación, formularios y
-  reglas de partidos.
+  formularios. Las pruebas cubren validadores, enums, navegación, formularios,
+  amistades, perfil de amigo, eliminación con Realtime y reglas de partidos.
 
 ## Pendiente (etapas siguientes)
 

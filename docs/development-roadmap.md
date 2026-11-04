@@ -106,8 +106,15 @@ Hecho:
 - Búsqueda de personas por correo exacto, sin directorio público.
 - Pantalla de Amigos real: solicitudes recibidas, solicitudes enviadas,
   aceptar, rechazar, cancelar y listado de amigos con foto y nivel.
+- Perfil de amigo al tocar una tarjeta, con nivel, mano dominante y eliminación
+  de la amistad con confirmación.
+- La eliminación borra la fila única y afecta a ambos. El cliente escucha
+  `friendships` por Supabase Realtime para refrescar las dos listas.
+- Migración `20261103000001_remove_friend_realtime.sql` aplicada: RPC
+  `remove_friend`, `replica identity full` y publicación en Realtime.
 - Estado vacío con acción para agregar al primer amigo y refresco manual.
-- Pruebas de mapeo de amistades y de la pantalla (11 nuevas; 48 en total).
+- Pruebas de mapeo de amistades, perfil, eliminación y Realtime (14 nuevas;
+  51 en total).
 - Documentación actualizada.
 
 Verificación E2E en Android (completada):
@@ -125,12 +132,27 @@ para aceptar/rechazar se insertó una solicitud pendiente real desde el SQL
 Editor. El envío, duplicado y cancelación se probaron desde la app con la cuenta
 principal. Las RPC y las políticas RLS se ejercitaron en ambos sentidos.
 
+Verificación E2E de perfil, eliminación y Realtime (completada):
+
+- [x] Abrir el perfil de un amigo desde la lista, con nivel y mano visibles.
+- [x] Eliminar la amistad desde el perfil con confirmación; la lista quedó
+  vacía y la consulta REST confirmó que no quedan filas.
+- [x] Realtime: una solicitud creada externamente por REST apareció sin
+  refrescar y desapareció al cancelarla.
+- [x] La relación es una fila única compartida, así que su eliminación deja de
+  existir para ambos usuarios.
+
+La cuenta secundaria `amonsalveru+e2e@gmail.com` sigue sin confirmar, así que no
+se observó el evento en una segunda sesión. La eliminación se validó por la fila
+única compartida y la consulta REST; Realtime se validó con un cambio externo
+recibido en la app sin refrescar.
+
 Pendiente fuera del criterio de cierre:
 
 - Invitación mediante enlace: diferida porque la app aún no tiene una URL
   pública de descarga ni un enlace de invitación propio.
 
-Verificación automatizada: `flutter analyze` sin issues, `flutter test` con 48
+Verificación automatizada: `flutter analyze` sin issues, `flutter test` con 51
 pruebas aprobadas, `flutter build apk --debug` y `flutter build web` correctos.
 
 Criterio de cierre: cumplido. Las solicitudes se envían, se aceptan o rechazan,

@@ -22,6 +22,8 @@ calendario y reprogramar horarios.
 - Foto de perfil en el bucket público `avatars` de Supabase Storage.
 - Amistades reales: solicitudes por correo exacto, aceptar, rechazar, cancelar y
   lista de amigos con su foto y nivel.
+- Perfil de amigo al tocar su tarjeta, con opción de eliminar la amistad.
+- Sincronización en vivo de amistades con Supabase Realtime.
 - Sesión persistente entre reinicios.
 - Navegación con cuatro secciones: Inicio, Invitaciones, Amigos y Perfil.
 - Tema visual (identidad tenis) y componentes reutilizables.

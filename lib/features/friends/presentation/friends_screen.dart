@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../app/router.dart';
 import '../../../core/errors/app_failure.dart';
 import '../../../core/widgets/initials_avatar.dart';
 import '../../../core/widgets/section_header.dart';
@@ -127,9 +129,19 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
           const _MutedText('Todavía no tienes amigos agregados.')
         else
           for (final Friend friend in overview.friends)
-            _FriendTile(friend: friend),
+            _FriendTile(friend: friend, onTap: () => _openFriend(friend)),
       ],
     );
+  }
+
+  Future<void> _openFriend(Friend friend) async {
+    final bool? removed = await context.push<bool>(
+      '${AppRoutes.friendProfile}/${friend.id}',
+      extra: friend,
+    );
+    if (removed == true && mounted) {
+      _showMessage('${friend.displayName} ya no está en tus amigos.');
+    }
   }
 
   Future<void> _openAddFriendDialog() async {
@@ -346,9 +358,10 @@ class _SentRequestTile extends StatelessWidget {
 }
 
 class _FriendTile extends StatelessWidget {
-  const _FriendTile({required this.friend});
+  const _FriendTile({required this.friend, required this.onTap});
 
   final Friend friend;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -359,6 +372,7 @@ class _FriendTile extends StatelessWidget {
 
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+      onTap: onTap,
       leading: InitialsAvatar(
         name: friend.displayName,
         imageUrl: friend.avatarUrl,
@@ -368,6 +382,7 @@ class _FriendTile extends StatelessWidget {
         style: const TextStyle(fontWeight: FontWeight.w600),
       ),
       subtitle: details.isEmpty ? null : Text(details.join(' · ')),
+      trailing: const Icon(Icons.chevron_right),
     );
   }
 }

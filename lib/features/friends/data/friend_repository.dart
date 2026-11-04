@@ -12,4 +12,6 @@ abstract interface class FriendRepository {
   });
 
   Future<void> cancelRequest({required String requestId});
+
+  Future<void> removeFriend({required String friendId});
 }

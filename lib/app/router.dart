@@ -11,6 +11,8 @@ import '../features/auth/presentation/forgot_password_screen.dart';
 import '../features/auth/presentation/login_screen.dart';
 import '../features/auth/presentation/register_screen.dart';
 import '../features/auth/presentation/reset_password_screen.dart';
+import '../features/friends/domain/friend.dart';
+import '../features/friends/presentation/friend_profile_screen.dart';
 import '../features/friends/presentation/friends_screen.dart';
 import '../features/home/presentation/home_screen.dart';
 import '../features/invitations/presentation/invitations_screen.dart';
@@ -25,6 +27,7 @@ abstract final class AppRoutes {
   static const String home = '/inicio';
   static const String invitations = '/invitaciones';
   static const String friends = '/amigos';
+  static const String friendProfile = '/amigo';
   static const String profile = '/perfil';
   static const String matchDetail = '/partido';
   static const String createMatch = '/nuevo-partido';
@@ -127,6 +130,28 @@ GoRouter createRouter({String? initialLocation}) {
         path: '${AppRoutes.matchDetail}/:id',
         builder: (BuildContext context, GoRouterState state) =>
             MatchDetailScreen(matchId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: '${AppRoutes.friendProfile}/:id',
+        builder: (BuildContext context, GoRouterState state) {
+          final Object? extra = state.extra;
+          if (extra is Friend) {
+            return FriendProfileScreen(friend: extra);
+          }
+          return Scaffold(
+            appBar: AppBar(title: const Text('Perfil de amigo')),
+            body: const Center(
+              child: Padding(
+                padding: EdgeInsets.all(24),
+                child: Text(
+                  'No pudimos abrir este perfil.\n'
+                  'Vuelve a la lista de amigos e inténtalo de nuevo.',
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ),
+          );
+        },
       ),
       GoRoute(
         path: AppRoutes.createMatch,

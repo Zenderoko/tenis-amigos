@@ -1,15 +1,23 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/errors/app_failure.dart';
 import '../../auth/domain/auth_user.dart';
 import '../../auth/presentation/auth_controller.dart';
 import '../data/friend_repository.dart';
+import '../data/friends_realtime.dart';
 import '../data/supabase_friend_repository.dart';
 import '../domain/friend.dart';
 
 /// Repositorio de amigos respaldado por Supabase.
 final Provider<FriendRepository> friendRepositoryProvider =
     Provider<FriendRepository>((Ref ref) => const SupabaseFriendRepository());
+
+/// Escucha cambios remotos para mantener la lista sincronizada entre usuarios.
+final Provider<FriendsRealtime> friendsRealtimeProvider =
+    Provider<FriendsRealtime>((Ref ref) => SupabaseFriendsRealtime());
 
 /// Amigos y solicitudes del usuario actual.
 final AsyncNotifierProvider<FriendsNotifier, FriendsOverview> friendsProvider =
@@ -31,6 +39,23 @@ class FriendsNotifier extends AsyncNotifier<FriendsOverview> {
         code: 'no_active_session',
       );
     }
+
+    final FriendsRealtime realtime = ref.watch(friendsRealtimeProvider);
+    bool active = true;
+    try {
+      realtime.start(() {
+        if (active) {
+          unawaited(_reload());
+        }
+      });
+    } catch (error) {
+      debugPrint('Friends realtime unavailable: $error');
+    }
+    ref.onDispose(() {
+      active = false;
+      realtime.stop();
+    });
+
     return _repository.fetchOverview();
   }
 
@@ -49,6 +74,11 @@ class FriendsNotifier extends AsyncNotifier<FriendsOverview> {
 
   Future<void> cancel(String requestId) async {
     await _repository.cancelRequest(requestId: requestId);
+    await _reload();
+  }
+
+  Future<void> removeFriend(String friendId) async {
+    await _repository.removeFriend(friendId: friendId);
     await _reload();
   }
 

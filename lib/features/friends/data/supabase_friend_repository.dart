@@ -135,6 +135,18 @@ class SupabaseFriendRepository implements FriendRepository {
     }
   }
 
+  @override
+  Future<void> removeFriend({required String friendId}) async {
+    try {
+      await _supabase.rpc(
+        'remove_friend',
+        params: <String, dynamic>{'p_friend_id': friendId},
+      );
+    } on PostgrestException catch (error) {
+      throw _failureFor(error);
+    }
+  }
+
   String _currentUserId() {
     final User? user = _supabase.auth.currentUser;
     if (user == null) {
@@ -201,6 +213,18 @@ class SupabaseFriendRepository implements FriendRepository {
       return const AppFailure(
         'Tu sesión expiró. Inicia sesión de nuevo.',
         code: 'not_authenticated',
+      );
+    }
+    if (message.contains('friendship_not_found')) {
+      return const AppFailure(
+        'La amistad ya no existe. Actualiza la lista.',
+        code: 'friendship_not_found',
+      );
+    }
+    if (message.contains('friendship_not_accepted')) {
+      return const AppFailure(
+        'La amistad ya no está activa. Actualiza la lista.',
+        code: 'friendship_not_accepted',
       );
     }
     if (message.contains('request_not_found')) {

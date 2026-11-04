@@ -23,6 +23,7 @@ En **SQL Editor** ejecuta, en este orden:
 4. `supabase/migrations/20261030000001_fix_rls_recursion.sql`
 5. `supabase/migrations/20261101000000_profile_fields_and_avatars.sql`
 6. `supabase/migrations/20261103000000_friendships.sql`
+7. `supabase/migrations/20261103000001_remove_friend_realtime.sql`
 
 La tercera migración crea un trigger en `auth.users` que inserta el perfil en
 `public.profiles` automáticamente al registrar una cuenta (incluido Google).
@@ -32,8 +33,10 @@ añade restricciones de validación y crea el bucket `avatars` con sus política
 La sexta normaliza las amistades (una fila por pareja, sin autosolicitudes),
 limita la escritura directa y crea las RPC para enviar, aceptar/rechazar y
 cancelar solicitudes. Depende de las funciones `are_friends` y `share_match` de
-la cuarta migración, así que respeta el orden. La app también verifica el perfil
-después del login como respaldo.
+la cuarta migración, así que respeta el orden. La séptima añade la RPC
+`remove_friend`, configura `replica identity full` y publica `friendships` en
+`supabase_realtime` para que ambos usuarios vean los cambios sin refrescar. La
+app también verifica el perfil después del login como respaldo.
 
 ## 3) Correo, confirmación y enlaces profundos
 
@@ -146,10 +149,15 @@ correo exacto en `auth.users` y usa su perfil de `public.profiles`. No hay un
 directorio público de usuarios: para agregar a alguien necesitas su correo.
 
 La app no escribe directamente en `friendships`. Las operaciones pasan por
-`send_friend_request_by_email`, `respond_friend_request` y
-`cancel_friend_request`, que comprueban quién envía, quién responde y el estado
-de la solicitud. Si necesitas eliminar una relación manualmente, hazlo desde el
-dashboard de Supabase.
+`send_friend_request_by_email`, `respond_friend_request`,
+`cancel_friend_request` y `remove_friend`, que comprueban quién envía, quién
+responde y el estado de la solicitud. Al tocar un amigo se abre su perfil y
+desde ahí se puede eliminar la amistad; la fila única desaparece para ambos.
+
+La séptima migración también publica `friendships` en Supabase Realtime. Si la
+lista no se actualiza sola cuando la otra persona envía, acepta o elimina una
+amistad, revisa que esa migración se haya aplicado y que la tabla aparezca en
+la publicación `supabase_realtime`.
 
 ## 10) Ejecutar
 
@@ -178,6 +186,8 @@ de entrar. La recuperación de contraseña abre la app mediante
 | `No encontramos el bucket avatars` | Falta aplicar la quinta migración. |
 | `new row violates row-level security policy` al subir la foto | El cliente intenta sobrescribir (`upsert`) o listar/borrar sin política SELECT; la app actual sube con `upsert: false`. |
 | `Could not find the function public.send_friend_request_by_email` | Falta aplicar la sexta migración. |
-| `permission denied for table friendships` | El cliente intenta escribir directamente; usa las RPC de la sexta migración. |
+| `Could not find the function public.remove_friend` | Falta aplicar la séptima migración. |
+| `permission denied for table friendships` | El cliente intenta escribir directamente; usa las RPC de las migraciones sexta y séptima. |
 | La solicitud de amistad no aparece | El receptor debe confirmar su correo y tener perfil; revisa que el correo sea exacto. |
+| La lista de amigos no se actualiza sola | Falta aplicar la séptima migración o `friendships` no está en la publicación `supabase_realtime`. |
 | El correo de confirmación no llega | Revisa el proveedor Email y la bandeja de spam. |
