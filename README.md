@@ -4,10 +4,9 @@ Aplicación móvil (Flutter) para organizar partidos de tenis entre amigos:
 crear partidos, invitar jugadores, responder invitaciones, consultar el
 calendario y reprogramar horarios.
 
-> Estado: **Etapa 3 — Amigos (completada)**. La autenticación, el perfil y las
-> amistades usan Supabase. Inicio, Invitaciones, Calendario y partidos siguen con
-> datos ficticios (mock). La invitación por enlace queda pendiente de una URL
-> pública de la app.
+> Estado: **Etapa 4 — Partidos (completada)**. Autenticación, perfil, amistades
+> y partidos usan Supabase. La invitación de amistades por enlace queda pendiente
+> de una URL pública de la app.
 
 ## Estado actual
 
@@ -23,13 +22,19 @@ calendario y reprogramar horarios.
 - Amistades reales: solicitudes por correo exacto, aceptar, rechazar, cancelar y
   lista de amigos con su foto y nivel.
 - Perfil de amigo al tocar su tarjeta, con opción de eliminar la amistad.
-- Sincronización en vivo de amistades con Supabase Realtime.
+- Sincronización en vivo de amistades y partidos con Supabase Realtime.
 - Sesión persistente entre reinicios.
 - Navegación con cuatro secciones: Inicio, Invitaciones, Amigos y Perfil.
 - Tema visual (identidad tenis) y componentes reutilizables.
 - Estados de carga, vacío y error.
-- Formulario de "Nuevo partido" con validaciones (aún no guarda datos).
-- Detalle de partido (mock).
+- Partidos reales: creación con modalidad, fecha, hora, duración, lugar e
+  invitados; selector de amistades aceptadas.
+- Invitaciones reales: aceptar o rechazar desde la lista y el detalle.
+- El organizador puede invitar jugadores adicionales o reemplazos hasta completar
+  el cupo.
+- Horarios guardados en UTC y mostrados en `America/Santiago` con el paquete
+  `timezone`.
+- Detalle de partido con jugadores, respuestas, cupo e historial de eventos.
 
 ## Requisitos
 
@@ -89,8 +94,8 @@ lib/
   core/
     config/                     Configuración leída de .env
     errors/                     Errores controlados
-    constants/                  Marca y datos mock
-    utils/                      Formato de fechas, avatares
+    constants/                  Marca y enlaces
+    utils/                      Fechas, avatares y zonas horarias
     widgets/                    Componentes reutilizables (estados, tarjetas)
   features/
     auth/                       Google, correo/contraseña y sesión de Supabase
@@ -105,5 +110,6 @@ lib/
 ## Documentación
 
 - [`docs/architecture.md`](docs/architecture.md): arquitectura y decisiones.
+- [`docs/business-rules.md`](docs/business-rules.md): reglas de partidos.
 - [`docs/development-roadmap.md`](docs/development-roadmap.md): etapas y estado.
 - [`docs/setup-supabase.md`](docs/setup-supabase.md): configuración de Supabase.

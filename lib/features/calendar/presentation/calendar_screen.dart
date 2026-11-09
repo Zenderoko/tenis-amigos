@@ -4,8 +4,9 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../app/theme/app_colors.dart';
+import '../../../core/errors/app_failure.dart';
 import '../../../core/utils/date_formatters.dart';
-import '../../../core/widgets/prototype_banner.dart';
+import '../../../core/utils/match_time.dart';
 import '../../../core/widgets/state_views.dart';
 import '../../matches/domain/match.dart';
 import '../../matches/presentation/matches_providers.dart';
@@ -39,10 +40,6 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
       appBar: AppBar(title: const Text('Calendario')),
       body: Column(
         children: <Widget>[
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-            child: const PrototypeBanner(),
-          ),
           _WeekHeader(
             weekStart: _weekStart,
             onPrevious: () => _changeWeek(-7),
@@ -57,7 +54,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
           const Divider(height: 1),
           Expanded(
             child: RefreshIndicator(
-              onRefresh: () async => ref.invalidate(matchesProvider),
+              onRefresh: () => ref.read(matchesProvider.notifier).refresh(),
               child: matches.when(
                 loading: () =>
                     const LoadingView(message: 'Cargando el calendario…'),
@@ -65,7 +62,9 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                   children: <Widget>[
                     const SizedBox(height: 80),
                     ErrorView(
-                      message: 'No pudimos cargar el calendario.',
+                      message: error is AppFailure
+                          ? error.message
+                          : 'No pudimos cargar el calendario.',
                       onRetry: () => ref.invalidate(matchesProvider),
                     ),
                   ],
@@ -74,7 +73,10 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                   final List<Match> dayMatches =
                       data
                           .where(
-                            (Match m) => _isSameDay(m.startsAt, _selectedDay),
+                            (Match m) => _isSameDay(
+                              MatchTime.inZone(m.startsAt, m.timezone),
+                              _selectedDay,
+                            ),
                           )
                           .toList()
                         ..sort(
@@ -233,7 +235,7 @@ class _WeekStrip extends StatelessWidget {
                 statuses: matchDates
                     .where(
                       (Match m) => _CalendarScreenState._isSameDay(
-                        m.startsAt,
+                        MatchTime.inZone(m.startsAt, m.timezone),
                         weekStart.add(Duration(days: i)),
                       ),
                     )

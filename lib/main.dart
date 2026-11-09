@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'app/app.dart';
 import 'core/config/app_config.dart';
+import 'core/utils/match_time.dart';
 import 'features/auth/data/auth_link_events.dart';
 
 Future<void> main() async {
@@ -15,6 +16,9 @@ Future<void> main() async {
 
   // Carga los datos de localización usados por `intl` (fechas en español).
   await initializeDateFormatting('es');
+
+  // Base IANA para convertir los partidos entre UTC y hora de Chile.
+  MatchTime.initialize();
 
   await _initializeSupabase(AppConfig.current);
 

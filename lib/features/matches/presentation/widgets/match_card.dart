@@ -1,23 +1,33 @@
 import 'package:flutter/material.dart';
 
+import '../../../../app/theme/app_colors.dart';
 import '../../../../core/utils/date_formatters.dart';
+import '../../../../core/utils/match_time.dart';
 import '../../../../core/widgets/initials_avatar.dart';
 import '../../domain/match.dart';
 import 'match_status_badge.dart';
 
-/// Tarjeta resumen de un partido. Se reutiliza en Inicio y Calendario.
+/// Tarjeta resumen de un partido. Se reutiliza en Inicio, Invitaciones y
+/// Calendario.
 class MatchCard extends StatelessWidget {
-  const MatchCard({super.key, required this.match, this.onTap});
+  const MatchCard({super.key, required this.match, this.onTap, this.footer});
 
   final Match match;
   final VoidCallback? onTap;
 
+  /// Acciones opcionales que se muestran al pie de la tarjeta.
+  final Widget? footer;
+
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
+    final DateTime localStart = MatchTime.inZone(
+      match.startsAt,
+      match.timezone,
+    );
     final String when =
-        '${AppDateFormatters.capitalize(AppDateFormatters.weekdayDayMonth(match.startsAt))} · '
-        '${AppDateFormatters.timeRange(match.startsAt, match.durationMinutes)}';
+        '${AppDateFormatters.capitalize(AppDateFormatters.weekdayDayMonth(localStart))} · '
+        '${AppDateFormatters.timeRange(localStart, match.durationMinutes)}';
 
     return Card(
       child: InkWell(
@@ -78,16 +88,61 @@ class MatchCard extends StatelessWidget {
               Row(
                 children: <Widget>[
                   Expanded(child: _ParticipantAvatars(match: match)),
-                  Text(
-                    '${match.confirmedPlayers}/${match.requiredPlayers} jugadores',
-                    style: theme.textTheme.labelMedium?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
+                  _CapacityChip(match: match),
                 ],
               ),
+              if (footer != null) ...<Widget>[
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 12),
+                  child: Divider(height: 1),
+                ),
+                footer!,
+              ],
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CapacityChip extends StatelessWidget {
+  const _CapacityChip({required this.match});
+
+  final Match match;
+
+  @override
+  Widget build(BuildContext context) {
+    final String label;
+    final Color color;
+    if (match.isFull) {
+      label = 'Cupo completo';
+      color = AppColors.statusConfirmed;
+    } else if (!match.isActive) {
+      label = '${match.confirmedPlayers}/${match.requiredPlayers} jugadores';
+      color = AppColors.statusCompleted;
+    } else if (match.pendingPlayers > 0) {
+      label =
+          '${match.pendingPlayers} '
+          '${match.pendingPlayers == 1 ? 'pendiente' : 'pendientes'}';
+      color = AppColors.statusPending;
+    } else {
+      label = 'Faltan ${match.availableSlots}';
+      color = AppColors.clay;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: color,
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
         ),
       ),
     );
@@ -121,6 +176,7 @@ class _ParticipantAvatars extends StatelessWidget {
                 child: InitialsAvatar(
                   name: shown[i].name,
                   radius: (size - 4) / 2,
+                  imageUrl: shown[i].avatarUrl,
                   color: shown[i].response == ParticipantResponse.accepted
                       ? scheme.primaryContainer
                       : scheme.surfaceContainerHighest,

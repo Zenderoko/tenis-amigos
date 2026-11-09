@@ -3,9 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/theme/app_colors.dart';
-import '../../../core/constants/mock_data.dart';
+import '../../../core/errors/app_failure.dart';
 import '../../../core/utils/date_formatters.dart';
-import '../../../core/widgets/prototype_banner.dart';
 import '../../../core/widgets/section_header.dart';
 import '../../../core/widgets/state_views.dart';
 import '../../auth/domain/auth_user.dart';
@@ -23,6 +22,7 @@ class HomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final AsyncValue<List<Match>> matches = ref.watch(matchesProvider);
+    final AuthUser? user = ref.watch(authControllerProvider).value;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Inicio')),
@@ -32,19 +32,22 @@ class HomeScreen extends ConsumerWidget {
         label: const Text('Nuevo partido'),
       ),
       body: RefreshIndicator(
-        onRefresh: () async => ref.invalidate(matchesProvider),
+        onRefresh: () => ref.read(matchesProvider.notifier).refresh(),
         child: matches.when(
           loading: () => const LoadingView(message: 'Cargando tus partidos…'),
           error: (Object error, StackTrace stack) => ListView(
             children: <Widget>[
               const SizedBox(height: 120),
               ErrorView(
-                message: 'No pudimos cargar tus partidos.\n$error',
+                message: error is AppFailure
+                    ? error.message
+                    : 'No pudimos cargar tus partidos.',
                 onRetry: () => ref.invalidate(matchesProvider),
               ),
             ],
           ),
-          data: (List<Match> data) => _HomeContent(matches: data),
+          data: (List<Match> data) =>
+              _HomeContent(matches: data, currentUserId: user?.id),
         ),
       ),
     );
@@ -52,34 +55,35 @@ class HomeScreen extends ConsumerWidget {
 }
 
 class _HomeContent extends StatelessWidget {
-  const _HomeContent({required this.matches});
+  const _HomeContent({required this.matches, required this.currentUserId});
 
   final List<Match> matches;
+  final String? currentUserId;
 
   @override
   Widget build(BuildContext context) {
-    final List<Match> confirmedMatches = matches.where((Match m) {
-      if (m.status != MatchStatus.confirmed) {
+    final String? userId = currentUserId;
+    final List<Match> confirmedMatches = matches.where((Match match) {
+      if (match.status != MatchStatus.confirmed) {
         return false;
       }
-      return m.participants.any(
-        (MatchParticipant p) =>
-            p.id == kMockCurrentUserId &&
-            p.response == ParticipantResponse.accepted,
-      );
+      if (userId == null) {
+        return false;
+      }
+      return match.participantFor(userId)?.response ==
+          ParticipantResponse.accepted;
     }).toList()..sort((Match a, Match b) => a.startsAt.compareTo(b.startsAt));
 
     if (confirmedMatches.isEmpty) {
       return ListView(
         padding: const EdgeInsets.all(16),
-        children: <Widget>[
-          const _Greeting(),
-          const SizedBox(height: 24),
-          const SizedBox(height: 100),
-          const EmptyView(
+        children: const <Widget>[
+          _Greeting(),
+          SizedBox(height: 24),
+          SizedBox(height: 100),
+          EmptyView(
             title: 'No hay partidos confirmados',
-            message:
-                'Solo se mostrarán aquí los partidos que estén confirmados.',
+            message: 'Cuando un partido complete su cupo, aparecerá aquí.',
             icon: Icons.event_available_outlined,
           ),
         ],
@@ -90,8 +94,6 @@ class _HomeContent extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
       children: <Widget>[
         const _Greeting(),
-        const SizedBox(height: 12),
-        const PrototypeBanner(),
         const SizedBox(height: 20),
         const SectionHeader(title: 'Partidos confirmados'),
         for (final Match match in confirmedMatches) ...<Widget>[

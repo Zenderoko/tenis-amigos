@@ -113,5 +113,82 @@ void main() {
       );
       expect(completed.isActive, isFalse);
     });
+
+    test('calcula plazas activas, pendientes y libres', () {
+      final Match match = buildMatch(
+        format: MatchFormat.doubles,
+        status: MatchStatus.awaitingPlayers,
+        participants: const <MatchParticipant>[
+          MatchParticipant(
+            id: 'me',
+            name: 'Yo',
+            isOrganizer: true,
+            response: ParticipantResponse.accepted,
+          ),
+          MatchParticipant(
+            id: 'u2',
+            name: 'Invitado',
+            response: ParticipantResponse.invited,
+          ),
+          MatchParticipant(
+            id: 'u3',
+            name: 'Rechazó',
+            response: ParticipantResponse.declined,
+          ),
+        ],
+      );
+
+      expect(match.activePlayers, 2);
+      expect(match.pendingPlayers, 1);
+      expect(match.availableSlots, 2);
+      expect(match.organizer?.id, 'me');
+    });
+
+    test('canRespond solo permite responder invitaciones pendientes', () {
+      final Match match = buildMatch(
+        format: MatchFormat.singles,
+        status: MatchStatus.awaitingPlayers,
+        participants: const <MatchParticipant>[
+          MatchParticipant(
+            id: 'u1',
+            name: 'Organizador',
+            isOrganizer: true,
+            response: ParticipantResponse.accepted,
+          ),
+          MatchParticipant(
+            id: 'me',
+            name: 'Yo',
+            response: ParticipantResponse.invited,
+          ),
+        ],
+      );
+
+      expect(match.canRespond('me'), isTrue);
+      expect(match.canRespond('u1'), isFalse);
+      expect(match.isOrganizer('u1'), isTrue);
+      expect(match.isParticipant('u2'), isFalse);
+    });
+  });
+
+  group('Valores de base de datos', () {
+    test('convierte los valores almacenados en Supabase', () {
+      expect(MatchFormat.fromValue('doubles'), MatchFormat.doubles);
+      expect(MatchStatus.fromValue('confirmed'), MatchStatus.confirmed);
+      expect(
+        ParticipantResponse.fromValue('declined'),
+        ParticipantResponse.declined,
+      );
+      expect(MatchEventType.fromValue('responded'), MatchEventType.responded);
+    });
+
+    test('usa valores seguros ante datos desconocidos', () {
+      expect(MatchFormat.fromValue('desconocido'), MatchFormat.singles);
+      expect(MatchStatus.fromValue('desconocido'), MatchStatus.awaitingPlayers);
+      expect(
+        ParticipantResponse.fromValue('desconocido'),
+        ParticipantResponse.invited,
+      );
+      expect(MatchEventType.fromValue('desconocido'), MatchEventType.created);
+    });
   });
 }

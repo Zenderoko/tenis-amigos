@@ -24,6 +24,7 @@ En **SQL Editor** ejecuta, en este orden:
 5. `supabase/migrations/20261101000000_profile_fields_and_avatars.sql`
 6. `supabase/migrations/20261103000000_friendships.sql`
 7. `supabase/migrations/20261103000001_remove_friend_realtime.sql`
+8. `supabase/migrations/20261104000000_matches.sql`
 
 La tercera migración crea un trigger en `auth.users` que inserta el perfil en
 `public.profiles` automáticamente al registrar una cuenta (incluido Google).
@@ -36,7 +37,9 @@ cancelar solicitudes. Depende de las funciones `are_friends` y `share_match` de
 la cuarta migración, así que respeta el orden. La séptima añade la RPC
 `remove_friend`, configura `replica identity full` y publica `friendships` en
 `supabase_realtime` para que ambos usuarios vean los cambios sin refrescar. La
-app también verifica el perfil después del login como respaldo.
+octava crea las RPC de partidos, ajusta las políticas de jugadores, añade
+restricciones e índices y publica `matches` y `match_participants` en Realtime.
+La app también verifica el perfil después del login como respaldo.
 
 ## 3) Correo, confirmación y enlaces profundos
 
@@ -118,6 +121,9 @@ El código lo lee con `flutter_dotenv` en `lib/main.dart`.
 
 ## 7) Emulador Android
 
+AVD usada en las pruebas: `flutter_emulator`. Al iniciarla, el ID de ADB es
+`emulator-5554`; los comandos de este documento asumen ese ID.
+
 El flujo de Google necesita una cuenta de Google en el dispositivo:
 
 1. Abre **Settings → Passwords & accounts → Add account → Google** en el
@@ -159,7 +165,27 @@ lista no se actualiza sola cuando la otra persona envía, acepta o elimina una
 amistad, revisa que esa migración se haya aplicado y que la tabla aparezca en
 la publicación `supabase_realtime`.
 
-## 10) Ejecutar
+## 10) Partidos
+
+La migración `20261104000000_matches.sql` crea `create_match`,
+`respond_match_invitation` e `invite_match_players`. Las tres son
+`SECURITY DEFINER`: validan amistades aceptadas, cupos, estados, fechas y
+concurrencia, y revocan las escrituras directas del cliente sobre `matches`,
+`match_participants` y `match_events`. El detalle de las reglas está en
+[`business-rules.md`](business-rules.md).
+
+La migración también permite que cualquier participante lea a todos los
+jugadores del partido (antes solo se veía la fila propia o el organizador),
+agrega restricciones de duración/lugar e índices, y publica `matches` y
+`match_participants` en `supabase_realtime`. Si no aparece la migración en el
+SQL Editor, recarga el proyecto y confirma que ejecutaste la octava antes de
+probar la app.
+
+Los horarios se guardan en UTC y se muestran en `America/Santiago` con el
+paquete `timezone`. Si pruebas desde otra zona horaria, la app mantiene la hora
+de Chile como referencia del MVP.
+
+## 11) Ejecutar
 
 ```powershell
 flutter pub get
@@ -188,6 +214,10 @@ de entrar. La recuperación de contraseña abre la app mediante
 | `Could not find the function public.send_friend_request_by_email` | Falta aplicar la sexta migración. |
 | `Could not find the function public.remove_friend` | Falta aplicar la séptima migración. |
 | `permission denied for table friendships` | El cliente intenta escribir directamente; usa las RPC de las migraciones sexta y séptima. |
+| `Could not find the function public.create_match` | Falta aplicar la octava migración. |
+| `permission denied for table matches` | El cliente intenta escribir directamente; usa las RPC de partidos. |
+| Solo aparece el organizador en un partido | Falta aplicar la octava migración o no se actualizó la política de `match_participants`. |
+| La lista de partidos no se actualiza sola | Falta aplicar la octava migración o `matches`/`match_participants` no están en `supabase_realtime`. |
 | La solicitud de amistad no aparece | El receptor debe confirmar su correo y tener perfil; revisa que el correo sea exacto. |
 | La lista de amigos no se actualiza sola | Falta aplicar la séptima migración o `friendships` no está en la publicación `supabase_realtime`. |
 | El correo de confirmación no llega | Revisa el proveedor Email y la bandeja de spam. |

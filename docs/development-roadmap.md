@@ -8,7 +8,7 @@ Estado de las etapas del proyecto. **No se avanza de etapa sin aprobación.**
 | 1 | Esqueleto de la app (navegación, tema, pantallas) | ✅ Completada |
 | 2 | Supabase y autenticación | ✅ Completada |
 | 3 | Amigos | ✅ Completada |
-| 4 | Partidos | ⬜ Pendiente |
+| 4 | Partidos | ✅ Completada |
 | 5 | Calendario y reprogramación | ⬜ Pendiente |
 | 6 | Notificaciones | ⬜ Pendiente |
 | 7 | Validación del MVP | ⬜ Pendiente |
@@ -158,3 +158,77 @@ pruebas aprobadas, `flutter build apk --debug` y `flutter build web` correctos.
 Criterio de cierre: cumplido. Las solicitudes se envían, se aceptan o rechazan,
 la lista de amigos se actualiza y las políticas impiden agregar amistades sin
 consentimiento.
+
+## Etapa 4 — Partidos (completada)
+
+Hecho en código:
+
+- Reglas de negocio documentadas en `docs/business-rules.md`.
+- Migración `20261104000000_matches.sql` creada con las RPC `create_match`,
+  `respond_match_invitation` e `invite_match_players`, validaciones de
+  modalidad, cupo, fecha, duración, lugar, amistad y concurrencia.
+- Escrituras directas revocadas; las mutaciones pasan por RPC
+  `SECURITY DEFINER`.
+- Política de `match_participants` corregida para que todos los jugadores del
+  partido puedan verse entre sí.
+- Realtime para `matches` y `match_participants`; la lista y el detalle se
+  refrescan al cambiar una invitación o un cupo.
+- Modelo de partido ampliado con organizador, zona horaria, versión, cupos,
+  invitaciones pendientes y valores de base de datos.
+- Repositorio Supabase real y providers con acciones de crear, responder e
+  invitar.
+- Formulario de creación seccionado con selector de amistades aceptadas.
+- Invitaciones reales con aceptar/rechazar desde la lista y el detalle.
+- Detalle real con jugadores, respuestas, fotos, nivel, cupo e historial de
+  eventos.
+- El organizador puede invitar jugadores adicionales o reemplazos desde el
+  detalle.
+- Tarjetas rediseñadas con cupo/pendientes, avatares y estado.
+- Se retiraron los datos mock, el aviso de prototipo y las pantallas basadas en
+  `kMockCurrentUserId`.
+- Horarios en UTC convertidos a `America/Santiago` con `timezone`; pruebas de
+  invierno/verano.
+- Pruebas nuevas de cupos, respuestas y valores de base de datos (59 en total).
+- `flutter analyze` sin hallazgos y builds Android debug y web completados.
+- Migración aplicada en Supabase SQL Editor.
+
+Verificación E2E de backend (completada):
+
+- `supabase/tests/stage4_e2e.sql` ejecutado en el SQL Editor: las 28
+  comprobaciones salieron en `ok = true` (usuarios/amistad, RLS, creación de
+  singles y dobles, aceptar/rechazar, reinvitación, validaciones negativas y
+  Realtime).
+
+Verificación E2E en Android (completada):
+
+- [x] Crear un singles desde la app e invitar a la cuenta E2E.
+- [x] Realtime: al aceptar la invitación desde el SQL Editor con la sesión
+  simulada de la cuenta E2E, el detalle cambió a `2/2 confirmados` y
+  `Confirmado` sin refrescar.
+- [x] Crear un dobles e invitar a la cuenta E2E.
+- [x] Rechazo por Realtime: el detalle mostró `Rechazado`, `1/4 confirmados` y
+  `3 plazas libres`.
+- [x] Reinvitar al reemplazo desde el detalle; la app volvió a mostrar
+  `Invitado`, `1 pendiente` y `2 plazas libres`.
+- [x] Aceptación por Realtime: el dobles quedó `2/4 confirmados` con
+  `2 plazas libres`.
+- [x] Bandeja de invitaciones: la cuenta E2E creó un singles inverso desde SQL
+  y la app primaria mostró la invitación; al pulsar `Aceptar` desapareció de
+  la bandeja y el partido apareció en Inicio como confirmado.
+- [x] Emulador usado: AVD `flutter_emulator`, ID ADB `emulator-5554`.
+
+Notas de la verificación:
+
+- La cuenta secundaria `amonsalveru+e2e@gmail.com` sigue sin confirmar. Sus
+  respuestas (aceptar/rechazar/reinvitar) se ejecutaron desde el SQL Editor con
+  `request.jwt.claim.sub`/`request.jwt.claims`, y la app primaria recibió los
+  cambios por Realtime. No se abrió una segunda sesión de UI para la secundaria.
+- Los partidos y la amistad de prueba quedaron creados en la cuenta primaria
+  para futuras pruebas.
+
+Verificación automatizada: `flutter analyze` sin issues, `flutter test` con 59
+pruebas aprobadas, `flutter build apk --debug` y `flutter build web` correctos.
+
+Criterio de cierre: cumplido. La app crea singles y dobles, invita amistades,
+acepta/rechaza invitaciones, reinvita reemplazos y refleja cupos/estados por
+Realtime.

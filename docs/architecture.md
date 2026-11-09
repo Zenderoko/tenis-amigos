@@ -14,7 +14,8 @@ responsabilidades separadas.
 | Estado | Riverpod | `flutter_riverpod` 3.x |
 | Navegación | GoRouter | `StatefulShellRoute` para las 4 secciones |
 | Fechas | `intl` | Formato en español (`es`) |
-| Backend | Supabase (PostgreSQL + Auth + Storage) | A partir de la Etapa 2 |
+| Zonas horarias | `timezone` | UTC ↔ `America/Santiago` con DST |
+| Backend | Supabase (PostgreSQL + Auth + Storage + Realtime) | A partir de la Etapa 2 |
 | Imágenes | `image_picker` | Selección de la foto de perfil |
 
 ## Capas por feature
@@ -23,11 +24,11 @@ Cada funcionalidad agrupa lo que necesita; **no se crean carpetas vacías**:
 
 - **presentation**: pantallas, widgets y providers de estado de interfaz.
 - **domain**: modelos y reglas de negocio (por ejemplo, reglas de un partido).
-- **data**: repositorios y acceso a datos (mock o Supabase según la etapa).
+- **data**: repositorios y acceso a datos (Supabase y Realtime).
 
 La interfaz **no** ejecuta consultas directas a la base de datos: siempre pasa
-por un repositorio. Esto permite cambiar el mock por Supabase sin tocar las
-pantallas.
+por un repositorio o un notifier. Esto mantiene las pantallas desacopladas del
+backend y permite sustituir implementaciones en las pruebas.
 
 ## Flujo de dependencias
 
@@ -56,11 +57,23 @@ presentation  →  data (repositorio)  →  Supabase
 
 - **Riverpod 3.4.3**: los providers son *autoDispose = false* por defecto; el
   estado se cachea. `AsyncValue.value` es la forma de leer el valor actual.
-- **Datos mock aislados**: los que quedan (partidos, invitaciones y calendario)
-  viven en `data/mock_*_repository.dart` y en `core/constants/mock_data.dart`,
-  claramente marcados. Se eliminarán al conectar esas etapas a Supabase.
 - **Identidad de usuario**: el usuario actual se referencia por `id`, nunca por
   correo o nombre. Desde la Etapa 2 es el `id` de Supabase Auth.
+- **Partidos**: el cliente lee `matches`, `match_participants` y `match_events`
+  según RLS. Crear partidos, responder invitaciones e invitar jugadores pasa por
+  RPC `SECURITY DEFINER` (`create_match`, `respond_match_invitation`,
+  `invite_match_players`); se revocaron las escrituras directas. Las RPC validan
+  amistad, cupos, estados y concurrencia con `for update`, y todas las reglas
+  están en `docs/business-rules.md`.
+- **Horarios**: `starts_at` se guarda en UTC y `timezone` contiene la zona IANA.
+  `MatchTime` convierte con `timezone`, por lo que `America/Santiago` cambia de
+  UTC-4 a UTC-3 sin cálculos manuales. La app inicializa la base IANA en `main`.
+- **Realtime de partidos**: `matches` y `match_participants` se publican en
+  `supabase_realtime` con `replica identity full`. El notifier de partidos
+  refresca la lista y el detalle cuando cambia una invitación o un cupo.
+- **Selector de jugadores**: tanto la creación como el detalle usan
+  `showFriendPickerSheet`, que solo muestra amistades aceptadas y excluye a
+  quienes ya ocupan una plaza activa.
 - **Localización**: la app fuerza `es` y usa `flutter_localizations` +
   `initializeDateFormatting('es')`.
 - **Configuración**: `.env` se empaqueta como asset y se lee con
@@ -111,12 +124,13 @@ presentation  →  data (repositorio)  →  Supabase
   pantalla inicial de forma perezosa, después de `Supabase.initialize`.
 - **Validadores y pruebas**: `AuthValidators` centraliza las reglas de los
   formularios. Las pruebas cubren validadores, enums, navegación, formularios,
-  amistades, perfil de amigo, eliminación con Realtime y reglas de partidos.
+  amistades, perfil de amigo, eliminación con Realtime, reglas de partidos y
+  conversión de zonas horarias.
 
 ## Pendiente (etapas siguientes)
 
-- Partidos, invitaciones y reglas de negocio en backend (Etapas 4-5).
+- Cancelar partidos y aceptar/rechazar reprogramaciones (Etapa 5).
+- Rediseño del calendario y recordatorios push (Etapas 5-6).
 - Invitación de amistades por enlace, cuando exista una URL pública de la app.
-- Notificaciones push (Etapa 6).
 - Opcional: política SELECT para que el dueño pueda listar, borrar o
   sobrescribir sus fotos desde el cliente.
