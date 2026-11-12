@@ -9,7 +9,7 @@ Estado de las etapas del proyecto. **No se avanza de etapa sin aprobación.**
 | 2 | Supabase y autenticación | ✅ Completada |
 | 3 | Amigos | ✅ Completada |
 | 4 | Partidos | ✅ Completada |
-| 5 | Calendario y reprogramación | 🟡 En verificación |
+| 5 | Calendario y reprogramación | ✅ Completada |
 | 6 | Notificaciones | ⬜ Pendiente |
 | 7 | Validación del MVP | ⬜ Pendiente |
 
@@ -233,7 +233,7 @@ Criterio de cierre: cumplido. La app crea singles y dobles, invita amistades,
 acepta/rechaza invitaciones, reinvita reemplazos y refleja cupos/estados por
 Realtime.
 
-## Etapa 5 — Calendario y reprogramación (en verificación)
+## Etapa 5 — Calendario y reprogramación (completada)
 
 Hecho en código:
 
@@ -266,19 +266,18 @@ Hecho en código:
 - Pruebas nuevas de propuestas y acciones (10 en total; 76 en total).
 - `flutter analyze` sin hallazgos y `flutter test` con 76 pruebas aprobadas.
 
-Pendiente de verificación (requiere aplicar la novena y la décima migración en
-Supabase):
+Verificación E2E (completada):
 
-- [ ] Aplicar `20261105000000_cancel_reschedule.sql` en el SQL Editor.
-- [ ] Ejecutar `supabase/tests/stage5_e2e.sql` (todas las filas en `ok = true`).
-- [ ] Cancelar un partido desde la app y comprobar el estado y el evento.
-- [ ] Retirarse de un partido confirmado y ver el cupo liberado.
-- [ ] Proponer un nuevo horario y aprobarlo/rechazarlo por Realtime.
-- [ ] Revisar el calendario en vista semanal y mensual.
-- [ ] Aplicar `20261106000000_remove_player.sql` en el SQL Editor.
-- [ ] Ejecutar `supabase/tests/remove_player_e2e.sql` (todas las filas en
+- [x] Aplicar `20261105000000_cancel_reschedule.sql` en el SQL Editor.
+- [x] Ejecutar `supabase/tests/stage5_e2e.sql` (todas las filas en `ok = true`).
+- [x] Cancelar un partido desde la app y comprobar el estado y el evento.
+- [x] Retirarse de un partido confirmado y ver el cupo liberado.
+- [x] Proponer un nuevo horario y aprobarlo/rechazarlo por Realtime.
+- [x] Revisar el calendario en vista semanal y mensual.
+- [x] Aplicar `20261106000000_remove_player.sql` en el SQL Editor.
+- [x] Ejecutar `supabase/tests/remove_player_e2e.sql` (todas las filas en
       `ok = true`).
-- [ ] Eliminar a un jugador desde el detalle y ver el cupo liberado.
+- [x] Eliminar a un jugador desde el detalle y ver el cupo liberado.
 
 Notas:
 
@@ -287,5 +286,6 @@ Notas:
 - Los cambios de propuesta incrementan `matches.version`, por lo que el Realtime
   ya suscrito refresca la interfaz sin canales adicionales.
 
-Criterio de cierre: pendiente de la verificación E2E en el emulador
-`flutter_emulator` (`emulator-5554`).
+Criterio de cierre: cumplido. La migración se aplicó en Supabase, los E2E de
+backend pasaron (`stage5_e2e.sql` y `remove_player_e2e.sql`) y el flujo se
+verificó en el emulador `flutter_emulator` (`emulator-5554`).

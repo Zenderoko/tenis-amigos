@@ -4,7 +4,7 @@ Aplicación móvil (Flutter) para organizar partidos de tenis entre amigos:
 crear partidos, invitar jugadores, responder invitaciones, consultar el
 calendario y reprogramar horarios.
 
-> Estado: **Etapa 5 — Calendario y reprogramación (en verificación)**.
+> Estado: **Etapa 5 — Calendario y reprogramación (completada)**.
 > Autenticación, perfil, amistades, partidos, cancelación y reprogramación usan
 > Supabase. La invitación de amistades por enlace queda pendiente de una URL
 > pública de la app.
