@@ -93,6 +93,56 @@ class MatchesNotifier extends AsyncNotifier<List<Match>> {
     await _reload();
   }
 
+  Future<void> cancelMatch(String matchId) async {
+    await _repository.cancelMatch(matchId);
+    await _reload();
+  }
+
+  Future<void> withdrawFromMatch(String matchId) async {
+    await _repository.withdrawFromMatch(matchId);
+    await _reload();
+  }
+
+  Future<void> removePlayer({
+    required String matchId,
+    required String playerId,
+  }) async {
+    await _repository.removeMatchPlayer(
+      matchId: matchId,
+      playerId: playerId,
+    );
+    await _reload();
+  }
+
+  Future<void> proposeReschedule({
+    required String matchId,
+    required DateTime startsAtUtc,
+    required String timezone,
+  }) async {
+    await _repository.proposeReschedule(
+      matchId: matchId,
+      startsAtUtc: startsAtUtc,
+      timezone: timezone,
+    );
+    await _reload();
+  }
+
+  Future<void> respondToReschedule({
+    required String proposalId,
+    required bool accept,
+  }) async {
+    await _repository.respondToReschedule(
+      proposalId: proposalId,
+      accept: accept,
+    );
+    await _reload();
+  }
+
+  Future<void> cancelReschedule(String proposalId) async {
+    await _repository.cancelReschedule(proposalId);
+    await _reload();
+  }
+
   Future<void> refresh() => _reload();
 
   Future<void> _reload() async {

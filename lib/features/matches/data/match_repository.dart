@@ -25,4 +25,26 @@ abstract interface class MatchRepository {
     required String matchId,
     required List<String> inviteeIds,
   });
+
+  Future<void> cancelMatch(String matchId);
+
+  Future<void> withdrawFromMatch(String matchId);
+
+  Future<void> removeMatchPlayer({
+    required String matchId,
+    required String playerId,
+  });
+
+  Future<void> proposeReschedule({
+    required String matchId,
+    required DateTime startsAtUtc,
+    required String timezone,
+  });
+
+  Future<void> respondToReschedule({
+    required String proposalId,
+    required bool accept,
+  });
+
+  Future<void> cancelReschedule(String proposalId);
 }

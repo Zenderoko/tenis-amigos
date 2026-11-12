@@ -15,9 +15,9 @@ import '../features/friends/domain/friend.dart';
 import '../features/friends/presentation/friend_profile_screen.dart';
 import '../features/friends/presentation/friends_screen.dart';
 import '../features/home/presentation/home_screen.dart';
-import '../features/invitations/presentation/invitations_screen.dart';
 import '../features/matches/presentation/create_match_screen.dart';
 import '../features/matches/presentation/match_detail_screen.dart';
+import '../features/matches/presentation/matches_screen.dart';
 import '../features/profile/presentation/edit_profile_screen.dart';
 import '../features/profile/presentation/profile_screen.dart';
 import 'scaffold_with_nav_bar.dart';
@@ -25,7 +25,7 @@ import 'scaffold_with_nav_bar.dart';
 /// Rutas nombradas (útiles para navegar sin repetir cadenas).
 abstract final class AppRoutes {
   static const String home = '/inicio';
-  static const String invitations = '/invitaciones';
+  static const String matches = '/partidos';
   static const String friends = '/amigos';
   static const String friendProfile = '/amigo';
   static const String profile = '/perfil';
@@ -100,9 +100,9 @@ GoRouter createRouter({String? initialLocation}) {
           StatefulShellBranch(
             routes: <RouteBase>[
               GoRoute(
-                path: AppRoutes.invitations,
+                path: AppRoutes.matches,
                 builder: (BuildContext context, GoRouterState state) =>
-                    const InvitationsScreen(),
+                    const MatchesScreen(),
               ),
             ],
           ),

@@ -9,7 +9,7 @@ Estado de las etapas del proyecto. **No se avanza de etapa sin aprobación.**
 | 2 | Supabase y autenticación | ✅ Completada |
 | 3 | Amigos | ✅ Completada |
 | 4 | Partidos | ✅ Completada |
-| 5 | Calendario y reprogramación | ⬜ Pendiente |
+| 5 | Calendario y reprogramación | 🟡 En verificación |
 | 6 | Notificaciones | ⬜ Pendiente |
 | 7 | Validación del MVP | ⬜ Pendiente |
 
@@ -232,3 +232,60 @@ pruebas aprobadas, `flutter build apk --debug` y `flutter build web` correctos.
 Criterio de cierre: cumplido. La app crea singles y dobles, invita amistades,
 acepta/rechaza invitaciones, reinvita reemplazos y refleja cupos/estados por
 Realtime.
+
+## Etapa 5 — Calendario y reprogramación (en verificación)
+
+Hecho en código:
+
+- Reglas de negocio ampliadas en `docs/business-rules.md` (cancelación, retiro y
+  reprogramación).
+- Migración `20261105000000_cancel_reschedule.sql` creada con las RPC
+  `cancel_match`, `withdraw_from_match`, `propose_reschedule`,
+  `respond_reschedule` y `cancel_reschedule`, y la tabla
+  `match_proposal_votes`.
+- Escrituras directas revocadas sobre `match_proposals` y
+  `match_proposal_votes`; las mutaciones pasan por RPC `SECURITY DEFINER`.
+- Tipos de evento `withdrawn` y `reschedule_rejected`; propuestas publicadas en
+  Realtime (además de incrementar `matches.version`).
+- Modelo de partido ampliado con `MatchProposal`, `MatchProposalStatus`,
+  `MatchProposalVote` y helpers de acciones (cancelar, retirar, proponer,
+  aprobar/rechazar).
+- Repositorio y providers con las acciones de cancelación, retiro y
+  reprogramación.
+- Detalle del partido con cancelación (organizador), retiro (jugador
+  confirmado), propuesta de nuevo horario y aprobación/rechazo con conteo de
+  votos; confirmaciones antes de acciones destructivas.
+- Calendario rediseñado con vistas semanal y mensual, indicadores por estado por
+  día y leyenda; el historial muestra los eventos nuevos.
+- Ventana de Partidos (antes Invitaciones) con pestañas En curso, Invitaciones e
+  Historial; las invitaciones pendientes se ven junto a los partidos activos y
+  el historial incluye finalizados y cancelados.
+- El organizador puede eliminar a un jugador que no podrá asistir (migración
+  `20261106000000_remove_player.sql`, RPC `remove_match_player`, estados
+  `removed` y evento `removed`).
+- Pruebas nuevas de propuestas y acciones (10 en total; 76 en total).
+- `flutter analyze` sin hallazgos y `flutter test` con 76 pruebas aprobadas.
+
+Pendiente de verificación (requiere aplicar la novena y la décima migración en
+Supabase):
+
+- [ ] Aplicar `20261105000000_cancel_reschedule.sql` en el SQL Editor.
+- [ ] Ejecutar `supabase/tests/stage5_e2e.sql` (todas las filas en `ok = true`).
+- [ ] Cancelar un partido desde la app y comprobar el estado y el evento.
+- [ ] Retirarse de un partido confirmado y ver el cupo liberado.
+- [ ] Proponer un nuevo horario y aprobarlo/rechazarlo por Realtime.
+- [ ] Revisar el calendario en vista semanal y mensual.
+- [ ] Aplicar `20261106000000_remove_player.sql` en el SQL Editor.
+- [ ] Ejecutar `supabase/tests/remove_player_e2e.sql` (todas las filas en
+      `ok = true`).
+- [ ] Eliminar a un jugador desde el detalle y ver el cupo liberado.
+
+Notas:
+
+- La política de reprogramación es: solo el organizador propone; deben aprobar
+  todos los jugadores confirmados y un rechazo la descarta.
+- Los cambios de propuesta incrementan `matches.version`, por lo que el Realtime
+  ya suscrito refresca la interfaz sin canales adicionales.
+
+Criterio de cierre: pendiente de la verificación E2E en el emulador
+`flutter_emulator` (`emulator-5554`).

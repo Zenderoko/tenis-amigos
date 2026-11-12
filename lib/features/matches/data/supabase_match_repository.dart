@@ -69,12 +69,16 @@ class SupabaseMatchRepository implements MatchRepository {
         profileIds,
       );
 
+      final Map<String, MatchProposal> proposals =
+          await _fetchPendingProposals(matchIds);
+
       return rows
           .map(
             (Map<String, dynamic> row) => _matchFromRow(
               row,
               byMatch[row['id']] ?? const <Map<String, dynamic>>[],
               profiles,
+              pendingProposal: proposals[row['id']],
             ),
           )
           .toList();
@@ -126,7 +130,17 @@ class SupabaseMatchRepository implements MatchRepository {
         );
       }).toList();
 
-      return _matchFromRow(row, participantRows, profiles, events: events);
+      final Map<String, MatchProposal> proposals = await _fetchPendingProposals(
+        <String>[id],
+      );
+
+      return _matchFromRow(
+        row,
+        participantRows,
+        profiles,
+        events: events,
+        pendingProposal: proposals[id],
+      );
     } on PostgrestException catch (error) {
       throw _failureFor(error);
     }
@@ -210,6 +224,171 @@ class SupabaseMatchRepository implements MatchRepository {
     }
   }
 
+  @override
+  Future<void> cancelMatch(String matchId) async {
+    try {
+      await _supabase.rpc(
+        'cancel_match',
+        params: <String, dynamic>{'p_match_id': matchId},
+      );
+    } on PostgrestException catch (error) {
+      throw _failureFor(error);
+    }
+  }
+
+  @override
+  Future<void> withdrawFromMatch(String matchId) async {
+    try {
+      await _supabase.rpc(
+        'withdraw_from_match',
+        params: <String, dynamic>{'p_match_id': matchId},
+      );
+    } on PostgrestException catch (error) {
+      throw _failureFor(error);
+    }
+  }
+
+  @override
+  Future<void> removeMatchPlayer({
+    required String matchId,
+    required String playerId,
+  }) async {
+    try {
+      await _supabase.rpc(
+        'remove_match_player',
+        params: <String, dynamic>{
+          'p_match_id': matchId,
+          'p_user_id': playerId,
+        },
+      );
+    } on PostgrestException catch (error) {
+      throw _failureFor(error);
+    }
+  }
+
+  @override
+  Future<void> proposeReschedule({
+    required String matchId,
+    required DateTime startsAtUtc,
+    required String timezone,
+  }) async {
+    try {
+      await _supabase.rpc(
+        'propose_reschedule',
+        params: <String, dynamic>{
+          'p_match_id': matchId,
+          'p_starts_at': startsAtUtc.toUtc().toIso8601String(),
+          'p_timezone': timezone,
+        },
+      );
+    } on PostgrestException catch (error) {
+      throw _failureFor(error);
+    }
+  }
+
+  @override
+  Future<void> respondToReschedule({
+    required String proposalId,
+    required bool accept,
+  }) async {
+    try {
+      await _supabase.rpc(
+        'respond_reschedule',
+        params: <String, dynamic>{
+          'p_proposal_id': proposalId,
+          'p_accept': accept,
+        },
+      );
+    } on PostgrestException catch (error) {
+      throw _failureFor(error);
+    }
+  }
+
+  @override
+  Future<void> cancelReschedule(String proposalId) async {
+    try {
+      await _supabase.rpc(
+        'cancel_reschedule',
+        params: <String, dynamic>{'p_proposal_id': proposalId},
+      );
+    } on PostgrestException catch (error) {
+      throw _failureFor(error);
+    }
+  }
+
+  Future<Map<String, MatchProposal>> _fetchPendingProposals(
+    List<String> matchIds,
+  ) async {
+    if (matchIds.isEmpty) {
+      return const <String, MatchProposal>{};
+    }
+
+    final List<Map<String, dynamic>> proposalRows = await _supabase
+        .from('match_proposals')
+        .select(
+          'id, match_id, proposed_by, proposed_starts_at, '
+          'proposed_timezone, status, created_at',
+        )
+        .inFilter('match_id', matchIds)
+        .eq('status', 'pending');
+
+    if (proposalRows.isEmpty) {
+      return const <String, MatchProposal>{};
+    }
+
+    final List<String> proposalIds = proposalRows
+        .map((Map<String, dynamic> row) => row['id'] as String)
+        .toList();
+
+    final List<Map<String, dynamic>> voteRows = await _supabase
+        .from('match_proposal_votes')
+        .select('proposal_id, user_id, response')
+        .inFilter('proposal_id', proposalIds);
+
+    final Map<String, List<MatchProposalVote>> votesByProposal =
+        <String, List<MatchProposalVote>>{};
+    for (final Map<String, dynamic> row in voteRows) {
+      final String? proposalId = row['proposal_id'] as String?;
+      final String? userId = row['user_id'] as String?;
+      if (proposalId == null || userId == null) {
+        continue;
+      }
+      votesByProposal
+          .putIfAbsent(proposalId, () => <MatchProposalVote>[])
+          .add(
+            MatchProposalVote(
+              userId: userId,
+              accepted: row['response'] == 'accepted',
+            ),
+          );
+    }
+
+    final Map<String, MatchProposal> result = <String, MatchProposal>{};
+    for (final Map<String, dynamic> row in proposalRows) {
+      final String id = row['id'] as String;
+      final String matchId = row['match_id'] as String;
+      result[matchId] = MatchProposal(
+        id: id,
+        proposedBy: row['proposed_by'] as String? ?? '',
+        proposedStartsAt:
+            DateTime.tryParse(
+              row['proposed_starts_at']?.toString() ?? '',
+            )?.toUtc() ??
+            DateTime.now().toUtc(),
+        timezone:
+            _optionalString(row['proposed_timezone']) ?? kDefaultMatchTimezone,
+        status: MatchProposalStatus.fromValue(row['status'] as String?),
+        createdAt:
+            DateTime.tryParse(
+              row['created_at']?.toString() ?? '',
+            )?.toLocal() ??
+            DateTime.now(),
+        votes: votesByProposal[id] ?? const <MatchProposalVote>[],
+      );
+    }
+    return result;
+  }
+
   Future<Map<String, Map<String, dynamic>>> _fetchProfiles(
     Set<String> ids,
   ) async {
@@ -232,6 +411,7 @@ class SupabaseMatchRepository implements MatchRepository {
     List<Map<String, dynamic>> participantRows,
     Map<String, Map<String, dynamic>> profiles, {
     List<MatchEvent> events = const <MatchEvent>[],
+    MatchProposal? pendingProposal,
   }) {
     final String organizerId = row['organizer_id'] as String? ?? '';
     final List<MatchParticipant> participants = participantRows.map((
@@ -266,6 +446,7 @@ class SupabaseMatchRepository implements MatchRepository {
       status: MatchStatus.fromValue(row['status'] as String?),
       participants: participants,
       events: events,
+      pendingProposal: pendingProposal,
       version: (row['version'] as num?)?.toInt() ?? 1,
     );
   }
@@ -285,6 +466,7 @@ class SupabaseMatchRepository implements MatchRepository {
       ParticipantResponse.invited => 2,
       ParticipantResponse.declined => 3,
       ParticipantResponse.withdrawn => 4,
+      ParticipantResponse.removed => 5,
     };
   }
 
@@ -371,7 +553,7 @@ class SupabaseMatchRepository implements MatchRepository {
     }
     if (message.contains('not_organizer')) {
       return const AppFailure(
-        'Solo el organizador puede invitar jugadores.',
+        'Solo el organizador puede realizar esta acción.',
         code: 'not_organizer',
       );
     }
@@ -433,6 +615,66 @@ class SupabaseMatchRepository implements MatchRepository {
       return const AppFailure(
         'La respuesta no es válida.',
         code: 'invalid_response',
+      );
+    }
+    if (message.contains('cannot_withdraw_organizer')) {
+      return const AppFailure(
+        'El organizador no puede retirarse: puede cancelar el partido.',
+        code: 'cannot_withdraw_organizer',
+      );
+    }
+    if (message.contains('withdraw_not_allowed')) {
+      return const AppFailure(
+        'Solo puedes retirarte si ya confirmaste tu asistencia.',
+        code: 'withdraw_not_allowed',
+      );
+    }
+    if (message.contains('cannot_remove_self')) {
+      return const AppFailure(
+        'No puedes eliminarte a ti mismo: para eso cancela el partido.',
+        code: 'cannot_remove_self',
+      );
+    }
+    if (message.contains('participant_not_found')) {
+      return const AppFailure(
+        'Ese jugador ya no está en el partido. Actualiza la lista.',
+        code: 'participant_not_found',
+      );
+    }
+    if (message.contains('player_not_removable')) {
+      return const AppFailure(
+        'Solo puedes eliminar a jugadores invitados o confirmados.',
+        code: 'player_not_removable',
+      );
+    }
+    if (message.contains('invalid_player')) {
+      return const AppFailure(
+        'El jugador seleccionado no es válido.',
+        code: 'invalid_player',
+      );
+    }
+    if (message.contains('proposal_not_found')) {
+      return const AppFailure(
+        'La propuesta ya no existe o no tienes acceso a ella.',
+        code: 'proposal_not_found',
+      );
+    }
+    if (message.contains('proposal_not_pending')) {
+      return const AppFailure(
+        'La propuesta ya fue resuelta. Actualiza el partido.',
+        code: 'proposal_not_pending',
+      );
+    }
+    if (message.contains('cannot_vote_own_proposal')) {
+      return const AppFailure(
+        'Quien propone el cambio no vota su propia propuesta.',
+        code: 'cannot_vote_own_proposal',
+      );
+    }
+    if (message.contains('not_accepted_participant')) {
+      return const AppFailure(
+        'Solo los jugadores confirmados pueden responder la propuesta.',
+        code: 'not_accepted_participant',
       );
     }
     if (error.code == '23505') {

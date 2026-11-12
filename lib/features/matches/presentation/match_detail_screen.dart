@@ -14,6 +14,7 @@ import '../domain/match.dart';
 import 'matches_providers.dart';
 import 'widgets/friend_picker_sheet.dart';
 import 'widgets/match_status_badge.dart';
+import 'widgets/reschedule_sheet.dart';
 
 /// Detalle de un partido con acciones para responder e invitar jugadores.
 class MatchDetailScreen extends ConsumerWidget {
@@ -59,6 +60,9 @@ class _MatchDetail extends ConsumerStatefulWidget {
 class _MatchDetailState extends ConsumerState<_MatchDetail> {
   bool _responding = false;
   bool _inviting = false;
+  bool _actionBusy = false;
+  bool _proposing = false;
+  bool _proposalBusy = false;
 
   Match get match => widget.match;
 
@@ -70,11 +74,27 @@ class _MatchDetailState extends ConsumerState<_MatchDetail> {
     final bool canRespond = userId != null && match.canRespond(userId);
     final bool canInvite =
         isOrganizer && match.isActive && match.availableSlots > 0;
+    final bool canCancel = userId != null && match.canCancel(userId);
+    final bool canWithdraw = userId != null && match.canWithdraw(userId);
+    final bool canPropose =
+        userId != null && match.canProposeReschedule(userId);
+    final bool canManagePlayers = isOrganizer && match.isActive && !_actionBusy;
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
       children: <Widget>[
         _DetailHeader(match: match),
+        if (match.pendingProposal != null) ...<Widget>[
+          const SizedBox(height: 16),
+          _ProposalCard(
+            match: match,
+            currentUserId: userId,
+            busy: _proposalBusy,
+            onAccept: () => _respondToProposal(accept: true),
+            onReject: () => _respondToProposal(accept: false),
+            onCancel: _cancelProposal,
+          ),
+        ],
         const SizedBox(height: 24),
         const SectionHeader(title: 'Jugadores'),
         Card(
@@ -85,6 +105,14 @@ class _MatchDetailState extends ConsumerState<_MatchDetail> {
                   participant: match.participants[i],
                   isCurrentUser:
                       match.participants[i].id == widget.currentUserId,
+                  onRemove:
+                      canManagePlayers &&
+                          match.canRemovePlayer(
+                            userId,
+                            match.participants[i].id,
+                          )
+                      ? () => _removePlayer(match.participants[i])
+                      : null,
                 ),
                 if (i < match.participants.length - 1) const Divider(height: 1),
               ],
@@ -152,6 +180,41 @@ class _MatchDetailState extends ConsumerState<_MatchDetail> {
             style: theme.textTheme.bodyMedium?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),
+          ),
+        ],
+        if (canPropose) ...<Widget>[
+          const SizedBox(height: 10),
+          OutlinedButton.icon(
+            onPressed: _proposing ? null : _proposeReschedule,
+            icon: _proposing
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.event_repeat),
+            label: Text(
+              _proposing ? 'Enviando propuesta…' : 'Proponer nuevo horario',
+            ),
+          ),
+        ],
+        if (canWithdraw) ...<Widget>[
+          const SizedBox(height: 10),
+          OutlinedButton.icon(
+            onPressed: _actionBusy ? null : _withdraw,
+            icon: const Icon(Icons.logout),
+            label: const Text('Retirarme del partido'),
+          ),
+        ],
+        if (canCancel) ...<Widget>[
+          const SizedBox(height: 10),
+          TextButton.icon(
+            onPressed: _actionBusy ? null : _cancelMatch,
+            style: TextButton.styleFrom(
+              foregroundColor: theme.colorScheme.error,
+            ),
+            icon: const Icon(Icons.cancel_outlined),
+            label: const Text('Cancelar partido'),
           ),
         ],
       ],
@@ -222,6 +285,181 @@ class _MatchDetailState extends ConsumerState<_MatchDetail> {
     if (!mounted) return;
     ScaffoldMessenger.of(context)
         .showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  Future<void> _cancelMatch() async {
+    final bool confirmed = await _confirm(
+      title: 'Cancelar partido',
+      message:
+          'Se cancelará el partido para todos los jugadores. Esta acción no '
+          'se puede deshacer.',
+      confirmLabel: 'Cancelar partido',
+      destructive: true,
+    );
+    if (!confirmed || !mounted) return;
+
+    setState(() => _actionBusy = true);
+    try {
+      await ref.read(matchesProvider.notifier).cancelMatch(match.id);
+      _showMessage('El partido quedó cancelado.');
+    } on AppFailure catch (error) {
+      _showMessage(error.message);
+    } catch (_) {
+      _showMessage('No pudimos cancelar el partido. Intenta de nuevo.');
+    } finally {
+      if (mounted) setState(() => _actionBusy = false);
+    }
+  }
+
+  Future<void> _withdraw() async {
+    final bool confirmed = await _confirm(
+      title: 'Retirarme del partido',
+      message:
+          'Tu plaza quedará libre y el organizador podrá invitar a otra '
+          'persona.',
+      confirmLabel: 'Retirarme',
+      destructive: true,
+    );
+    if (!confirmed || !mounted) return;
+
+    setState(() => _actionBusy = true);
+    try {
+      await ref.read(matchesProvider.notifier).withdrawFromMatch(match.id);
+      _showMessage('Te retiraste del partido.');
+    } on AppFailure catch (error) {
+      _showMessage(error.message);
+    } catch (_) {
+      _showMessage('No pudimos retirarte del partido. Intenta de nuevo.');
+    } finally {
+      if (mounted) setState(() => _actionBusy = false);
+    }
+  }
+
+  Future<void> _removePlayer(MatchParticipant participant) async {
+    final bool confirmed = await _confirm(
+      title: 'Eliminar jugador',
+      message:
+          '¿Eliminar a ${participant.name} del partido? Su plaza quedará libre '
+          'y podrás invitar a otra persona.',
+      confirmLabel: 'Eliminar',
+      destructive: true,
+    );
+    if (!confirmed || !mounted) return;
+
+    setState(() => _actionBusy = true);
+    try {
+      await ref
+          .read(matchesProvider.notifier)
+          .removePlayer(matchId: match.id, playerId: participant.id);
+      _showMessage('${participant.name} fue eliminado del partido.');
+    } on AppFailure catch (error) {
+      _showMessage(error.message);
+    } catch (_) {
+      _showMessage('No pudimos eliminar al jugador. Intenta de nuevo.');
+    } finally {
+      if (mounted) setState(() => _actionBusy = false);
+    }
+  }
+
+  Future<void> _proposeReschedule() async {
+    final RescheduleRequest? request = await showRescheduleSheet(
+      context: context,
+      match: match,
+    );
+    if (request == null || !mounted) return;
+
+    setState(() => _proposing = true);
+    try {
+      await ref
+          .read(matchesProvider.notifier)
+          .proposeReschedule(
+            matchId: match.id,
+            startsAtUtc: request.startsAtUtc,
+            timezone: request.timezone,
+          );
+      _showMessage('Propuesta de nuevo horario enviada.');
+    } on AppFailure catch (error) {
+      _showMessage(error.message);
+    } catch (_) {
+      _showMessage('No pudimos enviar la propuesta. Intenta de nuevo.');
+    } finally {
+      if (mounted) setState(() => _proposing = false);
+    }
+  }
+
+  Future<void> _respondToProposal({required bool accept}) async {
+    final MatchProposal? proposal = match.pendingProposal;
+    if (proposal == null) return;
+
+    setState(() => _proposalBusy = true);
+    try {
+      await ref
+          .read(matchesProvider.notifier)
+          .respondToReschedule(proposalId: proposal.id, accept: accept);
+      _showMessage(
+        accept
+            ? 'Aprobaste el nuevo horario.'
+            : 'Rechazaste el nuevo horario.',
+      );
+    } on AppFailure catch (error) {
+      _showMessage(error.message);
+    } catch (_) {
+      _showMessage('No pudimos registrar tu respuesta. Intenta de nuevo.');
+    } finally {
+      if (mounted) setState(() => _proposalBusy = false);
+    }
+  }
+
+  Future<void> _cancelProposal() async {
+    final MatchProposal? proposal = match.pendingProposal;
+    if (proposal == null) return;
+
+    setState(() => _proposalBusy = true);
+    try {
+      await ref
+          .read(matchesProvider.notifier)
+          .cancelReschedule(proposal.id);
+      _showMessage('Retiraste la propuesta de reprogramación.');
+    } on AppFailure catch (error) {
+      _showMessage(error.message);
+    } catch (_) {
+      _showMessage('No pudimos retirar la propuesta. Intenta de nuevo.');
+    } finally {
+      if (mounted) setState(() => _proposalBusy = false);
+    }
+  }
+
+  Future<bool> _confirm({
+    required String title,
+    required String message,
+    required String confirmLabel,
+    bool destructive = false,
+  }) async {
+    final ThemeData theme = Theme.of(context);
+    final bool? result = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) => AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Volver'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: destructive
+                ? FilledButton.styleFrom(
+                    backgroundColor: theme.colorScheme.error,
+                    foregroundColor: theme.colorScheme.onError,
+                  )
+                : null,
+            child: Text(confirmLabel),
+          ),
+        ],
+      ),
+    );
+    return result ?? false;
   }
 }
 
@@ -379,10 +617,14 @@ class _ParticipantRow extends StatelessWidget {
   const _ParticipantRow({
     required this.participant,
     required this.isCurrentUser,
+    this.onRemove,
   });
 
   final MatchParticipant participant;
   final bool isCurrentUser;
+
+  /// Si no es nulo, el organizador puede eliminar a este jugador.
+  final VoidCallback? onRemove;
 
   @override
   Widget build(BuildContext context) {
@@ -412,7 +654,20 @@ class _ParticipantRow extends StatelessWidget {
       subtitle: participant.isOrganizer
           ? Text(subtitle == null ? 'Organizador' : 'Organizador · $subtitle')
           : (subtitle == null ? null : Text(subtitle)),
-      trailing: _ResponseChip(response: participant.response),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          _ResponseChip(response: participant.response),
+          if (onRemove != null) ...<Widget>[
+            const SizedBox(width: 4),
+            IconButton(
+              tooltip: 'Eliminar del partido',
+              icon: const Icon(Icons.person_remove_outlined),
+              onPressed: onRemove,
+            ),
+          ],
+        ],
+      ),
     );
   }
 }
@@ -467,6 +722,9 @@ class _EventRow extends StatelessWidget {
       MatchEventType.responded => Icons.how_to_reg_outlined,
       MatchEventType.proposed => Icons.update,
       MatchEventType.rescheduled => Icons.event_repeat,
+      MatchEventType.rescheduleRejected => Icons.event_busy_outlined,
+      MatchEventType.withdrawn => Icons.logout,
+      MatchEventType.removed => Icons.person_remove_outlined,
       MatchEventType.cancelled => Icons.cancel_outlined,
       MatchEventType.completed => Icons.emoji_events_outlined,
     };
@@ -483,6 +741,7 @@ class _ResponseChip extends StatelessWidget {
     ParticipantResponse.invited => AppColors.statusPending,
     ParticipantResponse.declined => AppColors.statusCancelled,
     ParticipantResponse.withdrawn => AppColors.statusCancelled,
+    ParticipantResponse.removed => AppColors.statusCancelled,
   };
 
   @override
@@ -502,5 +761,137 @@ class _ResponseChip extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class _ProposalCard extends StatelessWidget {
+  const _ProposalCard({
+    required this.match,
+    required this.currentUserId,
+    required this.busy,
+    required this.onAccept,
+    required this.onReject,
+    required this.onCancel,
+  });
+
+  final Match match;
+  final String? currentUserId;
+  final bool busy;
+  final VoidCallback onAccept;
+  final VoidCallback onReject;
+  final VoidCallback onCancel;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final MatchProposal proposal = match.pendingProposal!;
+    final String? userId = currentUserId;
+    final DateTime proposedLocal = MatchTime.inZone(
+      proposal.proposedStartsAt,
+      proposal.timezone,
+    );
+    final bool canRespond =
+        userId != null && match.canRespondToProposal(userId);
+    final bool canCancel = userId != null && match.canCancelProposal(userId);
+    final int required = match.proposalVotersRequired(match.organizerId);
+
+    return Card(
+      color: theme.colorScheme.tertiaryContainer.withValues(alpha: 0.5),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Row(
+              children: <Widget>[
+                Icon(Icons.event_repeat, color: theme.colorScheme.tertiary),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Reprogramación pendiente',
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Text(
+              '${AppDateFormatters.capitalize(AppDateFormatters.fullDate(proposedLocal))} '
+              'a las ${AppDateFormatters.time(proposedLocal)}',
+              style: theme.textTheme.bodyLarge?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Propuesta por ${_proposerName()}. '
+              '${proposal.acceptedVotes} de $required '
+              '${required == 1 ? 'aprobación' : 'aprobaciones'}.',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+            if (canRespond) ...<Widget>[
+              const SizedBox(height: 14),
+              Row(
+                children: <Widget>[
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: busy ? null : onReject,
+                      icon: const Icon(Icons.close),
+                      label: const Text('Rechazar'),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: FilledButton.icon(
+                      onPressed: busy ? null : onAccept,
+                      icon: busy
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.check),
+                      label: const Text('Aprobar'),
+                    ),
+                  ),
+                ],
+              ),
+            ] else if (userId != null && proposal.hasVoted(userId)) ...<Widget>[
+              const SizedBox(height: 10),
+              Text(
+                proposal.voteFor(userId)!.accepted
+                    ? 'Aprobaste este cambio.'
+                    : 'Rechazaste este cambio.',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+            if (canCancel) ...<Widget>[
+              const SizedBox(height: 6),
+              TextButton.icon(
+                onPressed: busy ? null : onCancel,
+                icon: const Icon(Icons.undo),
+                label: const Text('Retirar propuesta'),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _proposerName() {
+    final MatchParticipant? proposer = match.participantFor(
+      match.pendingProposal!.proposedBy,
+    );
+    if (proposer == null) return 'el organizador';
+    return match.pendingProposal!.proposedBy == currentUserId
+        ? 'ti'
+        : proposer.name;
   }
 }

@@ -60,7 +60,8 @@ enum ParticipantResponse {
   invited('Invitado', 'invited'),
   accepted('Confirmado', 'accepted'),
   declined('Rechazado', 'declined'),
-  withdrawn('Retirado', 'withdrawn');
+  withdrawn('Retirado', 'withdrawn'),
+  removed('Eliminado', 'removed');
 
   const ParticipantResponse(this.label, this.dbValue);
 
@@ -82,6 +83,9 @@ enum MatchEventType {
   responded('Respuesta recibida', 'responded'),
   proposed('Reprogramación propuesta', 'proposed'),
   rescheduled('Horario actualizado', 'rescheduled'),
+  rescheduleRejected('Reprogramación rechazada', 'reschedule_rejected'),
+  withdrawn('Jugador retirado', 'withdrawn'),
+  removed('Jugador eliminado', 'removed'),
   cancelled('Partido cancelado', 'cancelled'),
   completed('Partido finalizado', 'completed');
 
@@ -96,6 +100,84 @@ enum MatchEventType {
       orElse: () => MatchEventType.created,
     );
   }
+}
+
+/// Estado de una propuesta de reprogramación.
+enum MatchProposalStatus {
+  pending('Pendiente', 'pending'),
+  accepted('Aceptada', 'accepted'),
+  rejected('Rechazada', 'rejected'),
+  superseded('Reemplazada', 'superseded');
+
+  const MatchProposalStatus(this.label, this.dbValue);
+
+  final String label;
+  final String dbValue;
+
+  static MatchProposalStatus fromValue(String? value) {
+    return values.firstWhere(
+      (MatchProposalStatus status) => status.dbValue == value,
+      orElse: () => MatchProposalStatus.pending,
+    );
+  }
+}
+
+/// Voto de un jugador sobre una propuesta de reprogramación.
+class MatchProposalVote {
+  const MatchProposalVote({required this.userId, required this.accepted});
+
+  final String userId;
+  final bool accepted;
+}
+
+/// Propuesta de reprogramación de un partido.
+class MatchProposal {
+  const MatchProposal({
+    required this.id,
+    required this.proposedBy,
+    required this.proposedStartsAt,
+    required this.timezone,
+    required this.status,
+    required this.createdAt,
+    this.votes = const <MatchProposalVote>[],
+  });
+
+  final String id;
+
+  /// Usuario que propuso el cambio.
+  final String proposedBy;
+
+  /// Nuevo inicio propuesto, en UTC.
+  final DateTime proposedStartsAt;
+
+  /// Zona horaria IANA de la propuesta.
+  final String timezone;
+
+  final MatchProposalStatus status;
+
+  /// Momento en que se creó la propuesta (hora local del dispositivo).
+  final DateTime createdAt;
+
+  final List<MatchProposalVote> votes;
+
+  /// `true` si el usuario indicado propuso el cambio.
+  bool isProposer(String userId) => proposedBy == userId;
+
+  /// Voto del usuario indicado, si ya respondió.
+  MatchProposalVote? voteFor(String userId) {
+    for (final MatchProposalVote vote in votes) {
+      if (vote.userId == userId) return vote;
+    }
+    return null;
+  }
+
+  bool hasVoted(String userId) => voteFor(userId) != null;
+
+  int get acceptedVotes =>
+      votes.where((MatchProposalVote vote) => vote.accepted).length;
+
+  int get rejectedVotes =>
+      votes.where((MatchProposalVote vote) => !vote.accepted).length;
 }
 
 /// Un jugador dentro de un partido.
@@ -159,6 +241,7 @@ class Match {
     this.timezone = kDefaultMatchTimezone,
     this.locationDetails,
     this.events = const <MatchEvent>[],
+    this.pendingProposal,
     this.version = 1,
   });
 
@@ -181,6 +264,9 @@ class Match {
   final MatchStatus status;
   final List<MatchParticipant> participants;
   final List<MatchEvent> events;
+
+  /// Propuesta de reprogramación pendiente de aprobación, si existe.
+  final MatchProposal? pendingProposal;
 
   /// Versión para detectar cambios concurrentes.
   final int version;
@@ -249,4 +335,49 @@ class Match {
 
   /// `true` si el usuario puede aceptar o rechazar la invitación.
   bool canRespond(String userId) => isActive && hasPendingInvitationFor(userId);
+
+  /// `true` si el usuario puede cancelar el partido (organizador y activo).
+  bool canCancel(String userId) => isActive && isOrganizer(userId);
+
+  /// `true` si el usuario puede retirarse (jugador aceptado que no organiza).
+  bool canWithdraw(String userId) =>
+      isActive &&
+      !isOrganizer(userId) &&
+      responseFor(userId) == ParticipantResponse.accepted;
+
+  /// `true` si el organizador indicado puede eliminar a [targetId] del partido.
+  bool canRemovePlayer(String organizerId, String targetId) {
+    if (!isActive || !isOrganizer(organizerId)) return false;
+    if (targetId == organizerId) return false;
+    final MatchParticipant? target = participantFor(targetId);
+    if (target == null) return false;
+    return target.response == ParticipantResponse.invited ||
+        target.response == ParticipantResponse.accepted;
+  }
+
+  /// `true` si el usuario puede proponer una reprogramación.
+  bool canProposeReschedule(String userId) =>
+      isActive && isOrganizer(userId) && pendingProposal == null;
+
+  /// `true` si el usuario puede retirar la propuesta pendiente.
+  bool canCancelProposal(String userId) =>
+      isActive && isOrganizer(userId) && pendingProposal != null;
+
+  /// `true` si el usuario puede aceptar o rechazar la propuesta pendiente.
+  bool canRespondToProposal(String userId) {
+    final MatchProposal? proposal = pendingProposal;
+    if (proposal == null || !isActive) return false;
+    if (proposal.isProposer(userId)) return false;
+    if (responseFor(userId) != ParticipantResponse.accepted) return false;
+    return !proposal.hasVoted(userId);
+  }
+
+  /// Jugadores aceptados que deben aprobar la propuesta pendiente.
+  int proposalVotersRequired(String organizerId) => participants
+      .where(
+        (MatchParticipant participant) =>
+            participant.response == ParticipantResponse.accepted &&
+            participant.id != organizerId,
+      )
+      .length;
 }

@@ -42,8 +42,9 @@ presentation  →  data (repositorio)  →  Supabase
 
 `lib/app/router.dart` define:
 
-- `StatefulShellRoute.indexedStack` con cuatro ramas (Inicio, Invitaciones,
-  Amigos, Perfil) para conservar el estado de cada pestaña.
+- `StatefulShellRoute.indexedStack` con cuatro ramas (Inicio, Partidos,
+  Amigos, Perfil) para conservar el estado de cada pestaña. La rama de Partidos
+  (`MatchesScreen`) usa pestañas internas En curso / Invitaciones / Historial.
 - Rutas de detalle y creación (`/partido/:id`, `/nuevo-partido`) fuera del
   shell, para que se abran por encima sin barra inferior.
 - Rutas de autenticación (`/login`, `/registro`, `/recuperar-contrasena`,
@@ -59,12 +60,23 @@ presentation  →  data (repositorio)  →  Supabase
   estado se cachea. `AsyncValue.value` es la forma de leer el valor actual.
 - **Identidad de usuario**: el usuario actual se referencia por `id`, nunca por
   correo o nombre. Desde la Etapa 2 es el `id` de Supabase Auth.
-- **Partidos**: el cliente lee `matches`, `match_participants` y `match_events`
-  según RLS. Crear partidos, responder invitaciones e invitar jugadores pasa por
-  RPC `SECURITY DEFINER` (`create_match`, `respond_match_invitation`,
-  `invite_match_players`); se revocaron las escrituras directas. Las RPC validan
+- **Partidos**: el cliente lee `matches`, `match_participants`,
+  `match_events`, `match_proposals` y `match_proposal_votes` según RLS. Crear
+  partidos, responder invitaciones, invitar jugadores, cancelar, retirarse,
+  eliminar jugadores y gestionar reprogramaciones pasa por RPC `SECURITY
+  DEFINER` (`create_match`, `respond_match_invitation`,
+  `invite_match_players`, `cancel_match`, `withdraw_from_match`,
+  `remove_match_player`, `propose_reschedule`, `respond_reschedule`,
+  `cancel_reschedule`); se revocaron las escrituras directas. Las RPC validan
   amistad, cupos, estados y concurrencia con `for update`, y todas las reglas
   están en `docs/business-rules.md`.
+- **Reprogramación**: solo el organizador propone un nuevo horario. La fecha
+  oficial no cambia hasta que todos los jugadores confirmados aprueben; un
+  rechazo descarta la propuesta. Solo hay una propuesta pendiente por partido
+  (`match_proposals.status = 'pending'`); una nueva la marca como `superseded`.
+  Los votos viven en `match_proposal_votes`. Cada cambio de propuesta incrementa
+  `matches.version`, así que el Realtime existente refresca la interfaz sin
+  canales adicionales.
 - **Horarios**: `starts_at` se guarda en UTC y `timezone` contiene la zona IANA.
   `MatchTime` convierte con `timezone`, por lo que `America/Santiago` cambia de
   UTC-4 a UTC-3 sin cálculos manuales. La app inicializa la base IANA en `main`.
@@ -129,8 +141,8 @@ presentation  →  data (repositorio)  →  Supabase
 
 ## Pendiente (etapas siguientes)
 
-- Cancelar partidos y aceptar/rechazar reprogramaciones (Etapa 5).
-- Rediseño del calendario y recordatorios push (Etapas 5-6).
+- Avisos dentro de la app y recordatorios push (Etapa 6).
+- Prevención de notificaciones duplicadas (Etapa 6).
 - Invitación de amistades por enlace, cuando exista una URL pública de la app.
 - Opcional: política SELECT para que el dueño pueda listar, borrar o
   sobrescribir sus fotos desde el cliente.

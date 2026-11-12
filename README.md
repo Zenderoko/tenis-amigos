@@ -4,9 +4,10 @@ Aplicación móvil (Flutter) para organizar partidos de tenis entre amigos:
 crear partidos, invitar jugadores, responder invitaciones, consultar el
 calendario y reprogramar horarios.
 
-> Estado: **Etapa 4 — Partidos (completada)**. Autenticación, perfil, amistades
-> y partidos usan Supabase. La invitación de amistades por enlace queda pendiente
-> de una URL pública de la app.
+> Estado: **Etapa 5 — Calendario y reprogramación (en verificación)**.
+> Autenticación, perfil, amistades, partidos, cancelación y reprogramación usan
+> Supabase. La invitación de amistades por enlace queda pendiente de una URL
+> pública de la app.
 
 ## Estado actual
 
@@ -24,7 +25,8 @@ calendario y reprogramar horarios.
 - Perfil de amigo al tocar su tarjeta, con opción de eliminar la amistad.
 - Sincronización en vivo de amistades y partidos con Supabase Realtime.
 - Sesión persistente entre reinicios.
-- Navegación con cuatro secciones: Inicio, Invitaciones, Amigos y Perfil.
+- Navegación con cuatro secciones: Inicio, Partidos, Amigos y Perfil.
+- Ventana de Partidos con pestañas: En curso, Invitaciones e Historial.
 - Tema visual (identidad tenis) y componentes reutilizables.
 - Estados de carga, vacío y error.
 - Partidos reales: creación con modalidad, fecha, hora, duración, lugar e
@@ -35,6 +37,11 @@ calendario y reprogramar horarios.
 - Horarios guardados en UTC y mostrados en `America/Santiago` con el paquete
   `timezone`.
 - Detalle de partido con jugadores, respuestas, cupo e historial de eventos.
+- Cancelación del partido por el organizador y retiro de jugadores confirmados.
+- El organizador puede eliminar a un jugador que no podrá asistir.
+- Reprogramación: el organizador propone un nuevo horario y los jugadores
+  confirmados lo aprueban o rechazan.
+- Calendario con vistas semanal y mensual, indicadores por estado y leyenda.
 
 ## Requisitos
 
@@ -102,8 +109,7 @@ lib/
     home/                       Pantalla de Inicio
     calendar/                   Pantalla de Calendario
     friends/                    Amistades reales (solicitudes y lista)
-    invitations/                Invitaciones (domain/data/presentation)
-    matches/                    Partidos (domain/data/presentation)
+    matches/                    Partidos, invitaciones e historial
     profile/                    Perfil real del usuario y edición
 ```
 

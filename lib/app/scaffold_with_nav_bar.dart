@@ -25,9 +25,9 @@ class ScaffoldWithNavBar extends StatelessWidget {
             label: 'Inicio',
           ),
           NavigationDestination(
-            icon: Icon(Icons.mail_outline),
-            selectedIcon: Icon(Icons.mail),
-            label: 'Invitaciones',
+            icon: Icon(Icons.sports_tennis_outlined),
+            selectedIcon: Icon(Icons.sports_tennis),
+            label: 'Partidos',
           ),
           NavigationDestination(
             icon: Icon(Icons.people_outline),

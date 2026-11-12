@@ -25,6 +25,8 @@ En **SQL Editor** ejecuta, en este orden:
 6. `supabase/migrations/20261103000000_friendships.sql`
 7. `supabase/migrations/20261103000001_remove_friend_realtime.sql`
 8. `supabase/migrations/20261104000000_matches.sql`
+9. `supabase/migrations/20261105000000_cancel_reschedule.sql`
+10. `supabase/migrations/20261106000000_remove_player.sql`
 
 La tercera migración crea un trigger en `auth.users` que inserta el perfil en
 `public.profiles` automáticamente al registrar una cuenta (incluido Google).
@@ -39,6 +41,12 @@ la cuarta migración, así que respeta el orden. La séptima añade la RPC
 `supabase_realtime` para que ambos usuarios vean los cambios sin refrescar. La
 octava crea las RPC de partidos, ajusta las políticas de jugadores, añade
 restricciones e índices y publica `matches` y `match_participants` en Realtime.
+La novena añade la cancelación, el retiro y la reprogramación: crea la tabla
+`match_proposal_votes`, las RPC `cancel_match`, `withdraw_from_match`,
+`propose_reschedule`, `respond_reschedule` y `cancel_reschedule`, amplía los
+tipos de evento y publica las propuestas en Realtime.
+La décima añade la RPC `remove_match_player` para que el organizador elimine a
+un jugador, con las respuestas `removed` y el evento `removed`.
 La app también verifica el perfil después del login como respaldo.
 
 ## 3) Correo, confirmación y enlaces profundos
@@ -185,6 +193,17 @@ Los horarios se guardan en UTC y se muestran en `America/Santiago` con el
 paquete `timezone`. Si pruebas desde otra zona horaria, la app mantiene la hora
 de Chile como referencia del MVP.
 
+La novena migración agrega la cancelación (organizador), el retiro de jugadores
+confirmados y las propuestas de reprogramación. Solo el organizador propone un
+nuevo horario; la fecha oficial cambia cuando todos los jugadores confirmados
+aprueban, y un rechazo la descarta. Las reglas completas están en
+[`business-rules.md`](business-rules.md). Después de aplicarla, el E2E de
+backend se ejecuta con `supabase/tests/stage5_e2e.sql`.
+
+La décima migración permite que el organizador elimine a un jugador activo
+(invitado o confirmado) que ya no podrá asistir. El E2E de backend de esta
+función se ejecuta con `supabase/tests/remove_player_e2e.sql`.
+
 ## 11) Ejecutar
 
 ```powershell
@@ -218,6 +237,9 @@ de entrar. La recuperación de contraseña abre la app mediante
 | `permission denied for table matches` | El cliente intenta escribir directamente; usa las RPC de partidos. |
 | Solo aparece el organizador en un partido | Falta aplicar la octava migración o no se actualizó la política de `match_participants`. |
 | La lista de partidos no se actualiza sola | Falta aplicar la octava migración o `matches`/`match_participants` no están en `supabase_realtime`. |
+| `Could not find the function public.cancel_match` | Falta aplicar la novena migración. |
+| `permission denied for table match_proposals` | El cliente intenta escribir directamente; usa las RPC de la novena migración. |
+| `Could not find the function public.remove_match_player` | Falta aplicar la décima migración. |
 | La solicitud de amistad no aparece | El receptor debe confirmar su correo y tener perfil; revisa que el correo sea exacto. |
 | La lista de amigos no se actualiza sola | Falta aplicar la séptima migración o `friendships` no está en la publicación `supabase_realtime`. |
 | El correo de confirmación no llega | Revisa el proveedor Email y la bandeja de spam. |
