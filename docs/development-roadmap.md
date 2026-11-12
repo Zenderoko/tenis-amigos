@@ -289,3 +289,47 @@ Notas:
 Criterio de cierre: cumplido. La migración se aplicó en Supabase, los E2E de
 backend pasaron (`stage5_e2e.sql` y `remove_player_e2e.sql`) y el flujo se
 verificó en el emulador `flutter_emulator` (`emulator-5554`).
+
+## Etapa 6 — Notificaciones (plan aprobado)
+
+Decisiones:
+
+- Solo avisos **in-app** completos; el push (FCM) queda con el andamiaje
+  preparado, sin simularlo ni activarlo.
+- Recordatorios previos al partido con **pg_cron** en Supabase.
+- Los avisos se muestran con una **campana con badge** en Inicio y una pantalla
+  **Avisos** dedicada.
+
+Alcance:
+
+Backend (migración nueva):
+
+- Tabla `public.notifications` (`user_id`, `type`, `match_id`, `title`, `body`,
+  `data`, `read_at`, `created_at`, `dedupe_key` único).
+- Lógica separada de partidos: triggers sobre `match_participants`,
+  `match_proposals` y `match_events` encolan los avisos.
+- Anti-duplicados con `dedupe_key` único + `on conflict do nothing`.
+- RLS de lectura propia; RPC `mark_notification_read(id)` y
+  `mark_all_notifications_read()`; sin escritura directa del cliente.
+- Realtime en `notifications`.
+- Job de `pg_cron` para el recordatorio previo al partido.
+- Andamiaje de push: tabla `device_tokens` + RPC `register_device_token`, sin
+  activar FCM.
+
+Frontend:
+
+- `features/notifications/` (domain/data/presentation) con provider y Realtime.
+- Campana con badge de no leídos y pantalla Avisos (marcar leído, abrir partido).
+- Avisos dentro de la app (banner/snackbar) al llegar uno nuevo.
+- `NotificationService` con implementación no-op tras un flag.
+
+Eventos cubiertos: nueva invitación, invitación aceptada/rechazada, propuesta de
+reprogramación, cambio de horario aprobado, cancelación, jugador eliminado y
+recordatorio previo.
+
+Pruebas y docs: unit tests (mapeo y dedupe), widget tests (lista y badge), E2E
+SQL (triggers + dedupe) y actualización de `business-rules.md`,
+`architecture.md`, `setup-supabase.md`, `README.md` y este roadmap.
+
+Criterio de cierre: avisos in-app funcionando con dedupe verificado por E2E y el
+andamiaje de push documentado sin afirmar que el push está activo.
